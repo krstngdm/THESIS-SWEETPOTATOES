@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/card_background"
+    android:padding="12dp"
+    android:layout_marginBottom="12dp">
+
+    <!-- Image Row -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/cardImageRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <!-- Stage Indicator Row -->
+    <LinearLayout
+        android:id="@+id/cardStageRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/stage1"
+            style="@style/StageBadge"
+            android:background="@drawable/stage1_bg"
+            android:text="Stage 1"
+            android:layout_width="0dp"
+            android:layout_weight="1"/>
+
+        <TextView
+            android:id="@+id/stage2"
+            style="@style/StageBadge"
+            android:background="@drawable/stage2_bg"
+            android:text="Stage 2"
+            android:layout_width="0dp"
+            android:layout_weight="1"/>
+
+        <TextView
+            android:id="@+id/stage3"
+            style="@style/StageBadge"
+            android:background="@drawable/stage3_bg"
+            android:text="Stage 3"
+            android:layout_width="0dp"
+            android:layout_weight="1"/>
+
+        <TextView
+            android:id="@+id/stage4"
+            style="@style/StageBadge"
+            android:background="@drawable/stage4_bg"
+            android:text="Stage 4"
+            android:layout_width="0dp"
+            android:layout_weight="1"/>
+
+        <TextView
+            android:id="@+id/stage5"
+            style="@style/StageBadge"
+            android:background="@drawable/stage5_bg"
+            android:text="Stage 5"
+            android:layout_width="0dp"
+            android:layout_weight="1"/>
+
+        <TextView
+            android:id="@+id/stage6"
+            style="@style/StageBadge"
+            android:background="@drawable/stage6_bg"
+            android:text="Stage 6"
+            android:layout_width="0dp"
+            android:layout_weight="1"/>
+    </LinearLayout>
+
+    <!-- Diagnostic Report -->
+    <TextView
+        android:id="@+id/cardDiagnostic"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Diagnostic Report"
+        android:textSize="14sp"
+        android:textColor="@color/black"
+        android:layout_marginBottom="4dp"/>
+
+    <!-- Timestamp -->
+    <TextView
+        android:id="@+id/cardTimestamp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="MM/DD/YYYY at hh:mm"
+        android:textSize="12sp"
+        android:textColor="@color/gray"
+        android:gravity="center"/>
+</LinearLayout>

@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">GrowSight</string>
+
+    <string name="help_button_desc">Help</string>
+    <string name="crop_icon_desc">Crop Icon</string>
+    <string name="upload_title">Upload the Images of your\nown sweet potato crop</string>
+    <string name="upload_image">Upload Image</string>
+    <string name="legal_text">By uploading an image or URL you agree to our Terms of Service.\nTo learn more about how remove bg handles your personal data,\ncheck our Privacy Policy.</string>
+    <string name="image_preview_desc">Image preview</string>
+    <string name="privacy_text">To learn more about how remove bg handles your personal data, check our Privacy Policy.</string>
+    <string name="conversation_history_desc">Conversation history area</string>
+    <string name="preview_scroll_desc">Image preview scroll area</string>
+    <string name="open_menu">Menu</string>
+</resources>

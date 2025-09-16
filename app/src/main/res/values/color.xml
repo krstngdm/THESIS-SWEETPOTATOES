@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#333333</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="gray">#473C38</color>
+    <color name="light_gray_bg">#f2f2f2</color>
+    <color name="green">#315732</color>
+    <color name="bg_green">#F4F6DD</color>
+    <color name="gd_1">#315732</color>
+    <color name="gd_2">#89A050</color>
+    <color name="bg_light_green">#F4F6DD</color>
+    <color name="greenGray">#A8B28E</color>
+
+    <color name="stage1">#E72E29</color>
+    <color name="stage2">#FF7701</color>
+    <color name="stage3">#FCBD5B</color>
+    <color name="stage4">#F5E627</color>
+    <color name="stage5">#B1DD56</color>
+    <color name="stage6">#4ED938</color>
+    <color name="divider_gray">#CCCCCC</color>
+    <color name="bottom_devider">#92A687</color>
+    <color name="gray_light">#E0E0E0</color>
+</resources>

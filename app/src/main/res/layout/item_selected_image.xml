@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="80dp"
+    android:layout_height="80dp"
+    android:layout_margin="4dp"
+    android:foreground="?attr/selectableItemBackground"> <!-- Adds ripple effect -->
+
+    <ImageView
+        android:id="@+id/previewImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:contentDescription="Selected image preview" />
+
+    <!-- Selection overlay (semi-transparent green) -->
+    <View
+        android:id="@+id/selectionOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#6000AA00"
+        android:visibility="gone" />
+
+    <!-- Checkmark indicator -->
+    <ImageView
+        android:id="@+id/selectionCheck"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:src="@drawable/ic_check_circle"
+        android:color="@color/white"
+        android:visibility="gone" />
+
+    <!-- Optional border for selected state -->
+    <View
+        android:id="@+id/selectionBorder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/selected_image_border"
+        android:visibility="gone" />
+</FrameLayout>
