@@ -16,7 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:background="@color/gray"
-            android:layout_marginTop="100dp"
+            android:layout_marginTop="80dp"
             android:paddingStart="16dp"
             android:paddingEnd="16dp">
 
@@ -49,14 +49,19 @@
 
 
         <!-- Logo -->
-        <ImageView
+        <ImageButton
+            android:id="@+id/logoButton"
             android:layout_width="200dp"
             android:layout_height="48dp"
-            android:src="@drawable/logo_name"
-            android:layout_marginTop="40dp"
+            android:layout_marginTop="20dp"
             android:layout_marginStart="10dp"
+            android:layout_marginEnd="12dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginEnd="12dp" />
+            android:src="@drawable/logo_name"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"
+            />
+
         <!-- Burger button -->
         <ImageButton
             android:id="@+id/menuButton"
@@ -64,8 +69,8 @@
             android:layout_height="48dp"
             android:src="@drawable/ic_menu"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginTop="40dp"
-            android:layout_marginEnd="16dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="24dp"
             android:layout_alignParentEnd="true"
             android:contentDescription="Menu" />
         <!-- Scrollable conversation area -->
@@ -74,24 +79,47 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_above="@id/bottomBar"
-            android:layout_marginTop="155dp"
+            android:layout_marginTop="135dp"
             android:fillViewport="true">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="0dp"
                 android:padding="12dp">
 
-                <!-- Conversation cards container -->
+                <!-- Instruction Text -->
+                <TextView
+                    android:id="@+id/instructionText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Upload the Images of your own sweet potato crop"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:layout_marginTop="60dp"
+                    android:layout_marginBottom="40dp"
+                    android:padding="16dp"/>
+
+
+                <!-- Uploaded images (optional, keep if you still show them) -->
                 <LinearLayout
                     android:id="@+id/uploadedImagesContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:dividerPadding="8dp"
                     android:orientation="vertical"
+                    android:dividerPadding="8dp"
                     android:showDividers="none" />
+
+                <!-- Messages container for conversation history -->
+                <LinearLayout
+                    android:id="@+id/messagesContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="8dp"
+                    android:padding="8dp" />
             </LinearLayout>
         </ScrollView>
 
@@ -108,7 +136,7 @@
             <!-- Preview of selected images -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
-                android:layout_height="110dp"
+                android:layout_height="90dp"
                 android:padding="8dp"
                 android:overScrollMode="never">
 
@@ -178,7 +206,7 @@
                     android:layout_height="60dp"
                     android:src="@drawable/ic_send"
                     android:contentDescription="Send"
-                    android:background="@drawable/rounded_green_button"/>
+                    android:background="@drawable/gradient_background"/>
             </LinearLayout>
         </LinearLayout>
     </RelativeLayout>
@@ -190,22 +218,79 @@
         android:layout_height="match_parent"
         android:layout_gravity="end"
         android:background="@color/white"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="vertical">
 
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Conversations"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:paddingBottom="8dp" />
+            android:orientation="horizontal"
+            android:background="@color/bg_light_green"
+            android:padding="16dp">
+
+            <!-- Left side: Vertical TextViews -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="My Plantations"
+                    android:textColor="@android:color/black"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:gravity="center_vertical" />
+
+                <TextView
+                    android:id="@+id/drawerSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tap to open, long press for options"
+                    android:textColor="@color/gray"
+                    android:textSize="12sp"
+                    android:paddingTop="4dp" />
+            </LinearLayout>
+
+            <!-- Right side: Add Conversation Button -->
+            <ImageButton
+                android:id="@+id/addConversationButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/upload_dark"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Add new conversation"
+                android:layout_gravity="center_vertical" />
+        </LinearLayout>
 
         <ListView
             android:id="@+id/conversationListView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:divider="@color/divider_gray"
-            android:dividerHeight="1dp" />
+            android:dividerHeight="1dp"
+            android:padding="8dp"
+            android:scrollbars="vertical"
+            android:fadeScrollbars="true"
+            android:fastScrollEnabled="true" />
+        <!-- Drawer Footer -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/divider_gray"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Swipe or tap outside to close"
+                android:textColor="@color/gray"
+                android:textSize="12sp"
+                android:gravity="center" />
+
+        </LinearLayout>
     </LinearLayout>
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#A1000000"
+    android:clickable="true"
+    android:focusable="true">
+
+    <ImageView
+        android:id="@+id/modalImageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter"
+        android:adjustViewBounds="true"
+        android:contentDescription="Enlarged plant image"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@android:color/transparent"
+        android:padding="20dp" />
+</RelativeLayout>

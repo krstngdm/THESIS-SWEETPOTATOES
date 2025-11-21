@@ -1,6 +1,7 @@
 package com.ai.growsight.data
 
 import androidx.room.*
+import com.ai.growsight.data.ConversationEntity
 
 @Dao
 interface ConversationDao {
@@ -24,4 +25,5 @@ interface ConversationDao {
 
     @Delete
     suspend fun deleteConversation(conversation: ConversationEntity)
+
 }

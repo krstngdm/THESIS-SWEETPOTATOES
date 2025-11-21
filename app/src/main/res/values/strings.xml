@@ -11,4 +11,5 @@
     <string name="conversation_history_desc">Conversation history area</string>
     <string name="preview_scroll_desc">Image preview scroll area</string>
     <string name="open_menu">Menu</string>
+    <string name="close_menu">Close navigation drawer</string>
 </resources>

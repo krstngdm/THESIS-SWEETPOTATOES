@@ -1,3 +1,4 @@
+
 package com.ai.growsight.data
 
 import androidx.room.Entity

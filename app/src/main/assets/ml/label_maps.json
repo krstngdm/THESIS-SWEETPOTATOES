@@ -1,0 +1,16 @@
+{
+  "maturity": {
+    "premature": 0,
+    "near-harvest": 1,
+    "harvest-ready": 2
+  },
+  "health": {
+    "bad": 0,
+    "good": 1,
+    "moderate": 2
+  },
+  "variant": {
+    "green": 0,
+    "purple": 1
+  }
+}
