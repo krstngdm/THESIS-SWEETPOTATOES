@@ -41,7 +41,7 @@ android {
     buildFeatures {
         compose = true
         mlModelBinding = true
-    }
+    }   
 
     packaging {
         resources {
@@ -52,13 +52,22 @@ android {
 
 dependencies {
 
+    implementation ("com.github.ybq:Android-SpinKit:1.4.0")
+
     // ==========================================================
     // 🔶 TensorFlow Lite
     // ==========================================================
-    implementation("org.tensorflow:tensorflow-lite:2.14.0")
-    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
-    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
-    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.15.0")
+
+    implementation ("org.tensorflow:tensorflow-lite:2.17.0")
+    implementation ("org.tensorflow:tensorflow-lite-support:0.5.0")
+    implementation ("org.tensorflow:tensorflow-lite-gpu:2.17.0")
+
+    // ==========================================================
+    // 🔶 Pytorch
+    // ==========================================================
+
+    implementation ("org.pytorch:pytorch_android:1.13.1")
+    implementation ("org.pytorch:pytorch_android_torchvision:1.13.1")
 
     // ==========================================================
     // 🔷 AndroidX Core + Lifecycle

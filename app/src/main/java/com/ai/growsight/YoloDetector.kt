@@ -17,43 +17,62 @@ class YoloDetector(context: Context) {
     private val confidenceThreshold = 0.25f
 
     init {
-        Log.d("YoloDetector", "=== INIT START ===")
+        Log.d("YoloDetector", "=== YOLO INIT ===")
+        try {
+            val modelFile = copyAsset(context, "ml/yolov8.tflite")
+            Log.d("YoloDetector", "Model file size: ${modelFile.length()} bytes")
 
-        // Copy model from assets to filesDir if missing
-        val modelFile = File(context.filesDir, "yolov8.tflite")
-        if (!modelFile.exists() || modelFile.length() == 0L) {
-            Log.d("YoloDetector", "Copying YOLO model from assets...")
-            context.assets.open("ml/yolov8.tflite").use { input ->
-                FileOutputStream(modelFile).use { output ->
-                    input.copyTo(output)
-                    output.flush()
-                }
-            }
-            Log.d("YoloDetector", "Model copied successfully. Size=${modelFile.length()}")
-        } else {
-            Log.d("YoloDetector", "Model already exists. Size=${modelFile.length()}")
-        }
+            interpreter = Interpreter(modelFile, Interpreter.Options().apply {
+                setNumThreads(4)
+                Log.d("YoloDetector", "TFLite interpreter created")
+            })
 
-        // Load interpreter
-        interpreter = Interpreter(modelFile, Interpreter.Options().apply {
-            setNumThreads(4)
-        })
+            labels = loadLabels(context)
+            Log.d("YoloDetector", "✓ YOLO initialized successfully, labels: $labels")
 
-        // Load YOLO labels
-        val labelJson = try {
-            context.assets.open("ml/yolo_labels.json").bufferedReader().use { it.readText() }
         } catch (e: Exception) {
-            "{\"0\": \"plant\"}" // Default label if file missing
+            Log.e("YoloDetector", "✗ YOLO initialization failed: ${e.message}", e)
+            throw e
         }
-        labels = JSONObject(labelJson).keys().asSequence().map { key ->
-            key.toInt() to JSONObject(labelJson).getString(key)
-        }.toMap()
-
-        Log.d("YoloDetector", "✓ Interpreter loaded successfully")
-        Log.d("YoloDetector", "Loaded labels: $labels")
-        Log.d("YoloDetector", "=== INIT COMPLETE ===")
     }
 
+    // ----------------------------------------------------------
+    // Load model from assets → filesDir
+    // ----------------------------------------------------------
+    private fun copyAsset(context: Context, path: String): File {
+        val outFile = File(context.filesDir, path)
+
+        if (!outFile.exists() || outFile.length() == 0L) {
+            outFile.parentFile?.mkdirs()
+            context.assets.open(path).use { input ->
+                FileOutputStream(outFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
+        return outFile
+    }
+
+    // ----------------------------------------------------------
+    // Load labels JSON
+    // ----------------------------------------------------------
+    private fun loadLabels(context: Context): Map<Int, String> {
+        return try {
+            val text = context.assets.open("ml/yolo_labels.json")
+                .bufferedReader().use { it.readText() }
+
+            val json = JSONObject(text)
+            json.keys().asSequence().associate { key ->
+                key.toInt() to json.getString(key)
+            }
+        } catch (e: Exception) {
+            mapOf(0 to "plant")
+        }
+    }
+
+    // ----------------------------------------------------------
+    // Detection result
+    // ----------------------------------------------------------
     data class Detection(
         val box: RectF,
         val score: Float,
@@ -61,96 +80,102 @@ class YoloDetector(context: Context) {
         val label: String
     )
 
+    // ----------------------------------------------------------
+    // Run YOLO detection
+    // ----------------------------------------------------------
     fun detect(bitmap: Bitmap): Detection? {
         return try {
             Log.d("YoloDetector", "Starting detection on bitmap: ${bitmap.width}x${bitmap.height}")
-
             val input = preprocessBitmap(bitmap)
+            Log.d("YoloDetector", "Input tensor prepared")
 
-            // Based on your Python output: [1, 5, 8400]
             val output = Array(1) { Array(5) { FloatArray(8400) } }
 
+            val startTime = System.currentTimeMillis()
             interpreter.run(input, output)
+            val endTime = System.currentTimeMillis()
+            Log.d("YoloDetector", "Inference completed in ${endTime - startTime}ms")
 
-            // Parse the [1, 5, 8400] format
-            parseYoloV8Output(output[0], bitmap.width, bitmap.height)
+            val detection = parseYoloOutput(output[0], bitmap.width, bitmap.height)
+            Log.d("YoloDetector", "Detection result: $detection")
+            detection
+
         } catch (e: Exception) {
-            Log.e("YoloDetector", "Detection failed: ${e.message}", e)
-            e.printStackTrace()
+            Log.e("YoloDetector", "Detection error: ${e.message}", e)
             null
         }
     }
 
-    private fun parseYoloV8Output(output: Array<FloatArray>, originalWidth: Int, originalHeight: Int): Detection? {
-        var bestDetection: Detection? = null
-        var bestScore = confidenceThreshold
+    // ----------------------------------------------------------
+    // Parse YOLO Output
+    // ----------------------------------------------------------
+    private fun parseYoloOutput(
+        out: Array<FloatArray>,
+        origW: Int,
+        origH: Int
+    ): Detection? {
+        Log.d("YoloDetector", "Parsing YOLO output, checking 8400 detections...")
 
-        // output structure: [5, 8400] where:
-        // output[0] = x_center (normalized 0-1)
-        // output[1] = y_center (normalized 0-1)
-        // output[2] = width (normalized 0-1)
-        // output[3] = height (normalized 0-1)
-        // output[4] = confidence scores
-        // 8400 detection candidates
+        var bestScore = confidenceThreshold
+        var best: Detection? = null
+        var totalDetections = 0
+
+        val scaleX = origW / 640f
+        val scaleY = origH / 640f
 
         for (i in 0 until 8400) {
-            val confidence = output[4][i]
+            val score = out[4][i]
+            if (score < confidenceThreshold) continue
 
-            if (confidence > bestScore) {
-                bestScore = confidence
+            totalDetections++
+            if (score > bestScore) {
+                val xc = out[0][i]
+                val yc = out[1][i]
+                val w = out[2][i]
+                val h = out[3][i]
 
-                // Get normalized coordinates (0-1 relative to 640x640)
-                val xCenter = output[0][i]
-                val yCenter = output[1][i]
-                val width = output[2][i]
-                val height = output[3][i]
+                val left = (xc - w / 2) * scaleX
+                val top = (yc - h / 2) * scaleY
+                val right = (xc + w / 2) * scaleX
+                val bottom = (yc + h / 2) * scaleY
 
-                // Convert to pixel coordinates in original image
-                val scaleX = originalWidth.toFloat() / inputSize
-                val scaleY = originalHeight.toFloat() / inputSize
-
-                // Convert center coordinates to corner coordinates
-                val left = (xCenter - width / 2) * inputSize * scaleX
-                val top = (yCenter - height / 2) * inputSize * scaleY
-                val right = (xCenter + width / 2) * inputSize * scaleX
-                val bottom = (yCenter + height / 2) * inputSize * scaleY
-
-                // Clamp to image boundaries
-                val clampedLeft = left.coerceIn(0f, originalWidth.toFloat())
-                val clampedTop = top.coerceIn(0f, originalHeight.toFloat())
-                val clampedRight = right.coerceIn(0f, originalWidth.toFloat())
-                val clampedBottom = bottom.coerceIn(0f, originalHeight.toFloat())
-
-                // For plant detection, use class 0
-                val classId = 0
-
-                bestDetection = Detection(
-                    RectF(clampedLeft, clampedTop, clampedRight, clampedBottom),
-                    confidence,
-                    classId,
-                    labels[classId] ?: "plant"
+                val clamped = RectF(
+                    left.coerceIn(0f, origW.toFloat()),
+                    top.coerceIn(0f, origH.toFloat()),
+                    right.coerceIn(0f, origW.toFloat()),
+                    bottom.coerceIn(0f, origH.toFloat())
                 )
 
-                Log.d("YoloDetector", "Found: ${bestDetection.label} (${"%.1f".format(confidence * 100)}%) " +
-                        "at [${clampedLeft.toInt()}, ${clampedTop.toInt()}, ${clampedRight.toInt()}, ${clampedBottom.toInt()}] " +
-                        "size: ${(clampedRight - clampedLeft).toInt()}x${(clampedBottom - clampedTop).toInt()}")
+                bestScore = score
+                best = Detection(
+                    box = clamped,
+                    score = score,
+                    classId = 0,
+                    label = labels[0] ?: "plant"
+                )
+
+                Log.d("YoloDetector", "Found detection: score=$score, box=$clamped")
             }
         }
 
-        Log.d("YoloDetector", "Best detection: ${bestDetection?.score ?: "None"}")
-        return bestDetection
+        Log.d("YoloDetector", "Total detections above threshold: $totalDetections, best: ${best?.score}")
+        return best
     }
 
+    // ----------------------------------------------------------
+    // Preprocess bitmap → (1,640,640,3)
+    // ----------------------------------------------------------
     private fun preprocessBitmap(bitmap: Bitmap): Array<Array<Array<FloatArray>>> {
-        val scaled = Bitmap.createScaledBitmap(bitmap, inputSize, inputSize, true)
-        val input = Array(1) { Array(inputSize) { Array(inputSize) { FloatArray(3) } } }
+        val resized = Bitmap.createScaledBitmap(bitmap, inputSize, inputSize, true)
+        val input = Array(1) { Array(640) { Array(640) { FloatArray(3) } } }
 
-        for (y in 0 until inputSize) {
-            for (x in 0 until inputSize) {
-                val pixel = scaled.getPixel(x, y)
-                input[0][y][x][0] = ((pixel shr 16 and 0xFF) / 255.0f) // R
-                input[0][y][x][1] = ((pixel shr 8 and 0xFF) / 255.0f)  // G
-                input[0][y][x][2] = ((pixel and 0xFF) / 255.0f)        // B
+        for (y in 0 until 640) {
+            for (x in 0 until 640) {
+                val p = resized.getPixel(x, y)
+
+                input[0][y][x][0] = ((p shr 16 and 0xFF) / 255f)
+                input[0][y][x][1] = ((p shr 8 and 0xFF) / 255f)
+                input[0][y][x][2] = ((p and 0xFF) / 255f)
             }
         }
         return input
@@ -158,6 +183,5 @@ class YoloDetector(context: Context) {
 
     fun close() {
         interpreter.close()
-        Log.d("YoloDetector", "Interpreter closed")
     }
 }

@@ -24,9 +24,11 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
+import com.ai.growsight.ai.MaturityClassifier
+import com.ai.growsight.ai.YoloDetector
 import com.ai.growsight.data.AppDatabase
-import com.ai.growsight.data.PromptEntity
 import com.ai.growsight.data.ConversationEntity
+import com.ai.growsight.data.PromptEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -38,8 +40,7 @@ import java.util.*
 import android.graphics.ImageDecoder
 import android.graphics.drawable.ColorDrawable
 import android.view.KeyEvent
-import com.ai.growsight.ai.MaturityClassifier
-import com.ai.growsight.ai.YoloDetector
+import com.ai.growsight.ai.ModelManager
 
 class ConversationsActivity : AppCompatActivity() {
 
@@ -51,6 +52,11 @@ class ConversationsActivity : AppCompatActivity() {
         const val CAMERA_PERMISSION_CODE = 3001
         const val EXTRA_IMAGE_URIS = "extra_image_uris"
         val sentUris = mutableSetOf<String>() // keeps track of already-sent images
+
+        // Track if models are already loaded from UploadActivity
+        var modelsLoadedFromUpload: Boolean = false
+        var sharedYolo: YoloDetector? = null
+        var sharedCnn: MaturityClassifier? = null
     }
 
     private lateinit var uploadedImagesContainer: LinearLayout
@@ -72,14 +78,12 @@ class ConversationsActivity : AppCompatActivity() {
 
     private lateinit var db: AppDatabase
 
-    // Model variables - NOT lazy initialized
+    // Model variables
     private var yolo: YoloDetector? = null
     private var cnn: MaturityClassifier? = null
     private var modelsLoaded = false
-
     private var modelLoadingInProgress = false
     private val modelLoadCallbacks = mutableListOf<() -> Unit>()
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -326,6 +330,15 @@ class ConversationsActivity : AppCompatActivity() {
             uploadedUris.clear()
             previewContainer.removeAllViews()
         }
+
+        // Initialize testing
+        setupTesting()
+
+        // Optional: Auto-test after delay for quick verification
+        lifecycleScope.launch {
+            delay(5000) // Wait 5 seconds for models to load
+            Log.d("TEST_AUTO", "Models loaded - ready for testing")
+        }
     }
 
     private fun loadModels() {
@@ -337,40 +350,33 @@ class ConversationsActivity : AppCompatActivity() {
         modelLoadingInProgress = true
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                Log.d("ModelLoad", "Starting model loading...")
+                Log.d("ModelLoad", "Starting model loading using ModelManager...")
 
-                // Load YOLO with better error handling
-                yolo = try {
-                    YoloDetector(this@ConversationsActivity).also {
-                        Log.d("ModelLoad", "✓ YOLO loaded successfully")
-                    }
-                } catch (e: Exception) {
-                    Log.e("ModelLoad", "✗ YOLO failed: ${e.message}")
-                    null
-                }
-
-                // Load CNN
-                cnn = try {
-                    MaturityClassifier(this@ConversationsActivity).also {
-                        Log.d("ModelLoad", "✓ CNN loaded successfully")
-                    }
-                } catch (e: Exception) {
-                    Log.e("ModelLoad", "✗ CNN failed: ${e.message}")
-                    null
-                }
+                // Use the shared model instances from ModelManager
+                yolo = ModelManager.getYoloDetector(this@ConversationsActivity)
+                cnn = ModelManager.getMaturityClassifier(this@ConversationsActivity)
 
                 modelsLoaded = true
                 modelLoadingInProgress = false
 
-                Log.d("ModelLoad", "Model loading finished. YOLO=${yolo != null}, CNN=${cnn != null}")
+                Log.d("ModelLoad", "ModelManager loading finished. YOLO=${yolo != null}, CNN=${cnn != null}")
 
                 withContext(Dispatchers.Main) {
                     updateUIForModelStatus()
                     modelLoadCallbacks.forEach { it.invoke() }
                     modelLoadCallbacks.clear()
+
+                    // Show model status
+                    val status = when {
+                        yolo != null && cnn != null -> "✓ All AI models loaded"
+                        yolo != null -> "✓ Object detection ready"
+                        cnn != null -> "✓ Plant analysis ready"
+                        else -> "⚠ AI models unavailable"
+                    }
+                    Toast.makeText(this@ConversationsActivity, status, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Log.e("ModelLoad", "Failed to load models: ${e.message}")
+                Log.e("ModelLoad", "Failed to load models using ModelManager: ${e.message}", e)
                 modelLoadingInProgress = false
                 withContext(Dispatchers.Main) {
                     showError("Failed to load AI models: ${e.message}")
@@ -398,7 +404,6 @@ class ConversationsActivity : AppCompatActivity() {
         val cnnAvailable = cnn != null
 
         Log.d("ModelStatus", "YOLO: $yoloAvailable, CNN: $cnnAvailable")
-
         if (!yoloAvailable || !cnnAvailable) {
             val message = buildString {
                 append("AI Models Status:\n")
@@ -421,7 +426,7 @@ class ConversationsActivity : AppCompatActivity() {
             try {
                 Log.d("ConversationsActivity", "Processing ${incomingUris.size} incoming images")
 
-                // Create new conversation
+                // Create new conversation first
                 val count = db.conversationDao().getConversationCount()
                 val defaultName = "Plantation#${count + 1}"
                 val newId = db.conversationDao().insertConversation(ConversationEntity(name = defaultName))
@@ -433,21 +438,12 @@ class ConversationsActivity : AppCompatActivity() {
                 }
                 refreshConversationList()
 
-                // Wait for models to load if not ready
-                if (yolo == null || cnn == null) {
-                    Log.d("ModelWait", "Waiting for actual model instances to be ready (timeout 5s)...")
-                    var waited = 0
-                    while ((yolo == null || cnn == null) && waited < 50) { // 5 second timeout, 100ms intervals
-                        delay(100)
-                        waited++
-                    }
-                    Log.d("ModelWait", "Wait complete. YOLO=${yolo != null}, CNN=${cnn != null}")
-                    if (yolo == null || cnn == null) {
-                        Log.w("ModelWait", "One or more models still unavailable after timeout")
-                    }
+                // Wait for models to be properly loaded
+                if (!waitForModels()) {
+                    Log.w("ModelWait", "Models not available after waiting, using fallback")
+                    fallbackSaveImages(incomingUris, "AI models not ready")
+                    return
                 }
-
-                Log.d("AI Models", "YOLO available: ${yolo != null}, CNN available: ${cnn != null}")
 
                 val persistedUris: List<Uri> = incomingUris.mapNotNull {
                     val localUri = ensureLocalCopy(it)
@@ -569,11 +565,6 @@ class ConversationsActivity : AppCompatActivity() {
             yolo?.close()
         } catch (e: Exception) {
             Log.e("YOLO", "Error closing YOLO", e)
-        }
-        try {
-            cnn?.close()
-        } catch (e: Exception) {
-            Log.e("CNN", "Error closing CNN", e)
         }
     }
 
@@ -845,12 +836,10 @@ class ConversationsActivity : AppCompatActivity() {
     }
 
     private suspend fun processImagesWithAI(persistedUris: List<Uri>) {
-        // Show loading indicator
         withContext(Dispatchers.Main) {
             Toast.makeText(this@ConversationsActivity, "Starting AI analysis...", Toast.LENGTH_SHORT).show()
         }
 
-        // Wait for models to be ready
         if (!waitForModels()) {
             Log.w("AI Processing", "Models not available after waiting, using fallback")
             fallbackSaveImages(persistedUris, "AI models not ready")
@@ -864,23 +853,15 @@ class ConversationsActivity : AppCompatActivity() {
         var averageStage = 0f
         var processedCount = 0
 
+        // Process each image independently
         for ((index, uri) in persistedUris.withIndex()) {
-            // Declare bitmap variable outside the try block so it's accessible in finally
             var bitmap: Bitmap? = null
             var usedCrop: Bitmap? = null
 
             try {
-                Log.d("AI Processing", "Processing image ${index + 1}/${persistedUris.size}")
+                Log.d("AI Processing", "Processing image ${index + 1}/${persistedUris.size}: $uri")
 
-                // Update progress
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@ConversationsActivity,
-                        "Analyzing image ${index + 1}/${persistedUris.size}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-
+                // Load bitmap
                 bitmap = loadBitmapFromUri(uri)
                 if (bitmap == null) {
                     fullReport.append("❌ Image ${index + 1}: Could not load image\n\n")
@@ -888,8 +869,10 @@ class ConversationsActivity : AppCompatActivity() {
                 }
 
                 fullReport.append("📸 Image ${index + 1}\n")
+                Log.d("AI Processing", "Bitmap loaded: ${bitmap.width}x${bitmap.height}")
 
                 var detection: YoloDetector.Detection? = null
+                var plantDetected = false
 
                 // YOLO Detection
                 if (yolo != null) {
@@ -899,12 +882,11 @@ class ConversationsActivity : AppCompatActivity() {
                         }
 
                         if (detection != null) {
+                            plantDetected = true
                             fullReport.append("   • 🔍 Object Detection: ${detection.label} (${"%.1f".format(detection.score * 100)}% confidence)\n")
+                            Log.d("YOLO Detection", "Found: ${detection.label} with ${detection.score}")
 
-                            // Log detection details
-                            Log.d("YOLO Detection", "Found: ${detection.label} with ${detection.score} at ${detection.box}")
-
-                            // Crop detected area with safety checks
+                            // Crop detected area
                             val left = detection.box.left.toInt().coerceIn(0, bitmap.width - 1)
                             val top = detection.box.top.toInt().coerceIn(0, bitmap.height - 1)
                             val right = detection.box.right.toInt().coerceIn(left + 1, bitmap.width)
@@ -912,7 +894,7 @@ class ConversationsActivity : AppCompatActivity() {
                             val width = right - left
                             val height = bottom - top
 
-                            if (width > 0 && height > 0) {
+                            if (width > 10 && height > 10) { // Minimum size threshold
                                 usedCrop = try {
                                     Bitmap.createBitmap(bitmap, left, top, width, height)
                                 } catch (e: Exception) {
@@ -932,30 +914,32 @@ class ConversationsActivity : AppCompatActivity() {
                     fullReport.append("   • 🔍 Object Detection: Unavailable\n")
                 }
 
-                // CNN Analysis
+                // CNN Analysis - always analyze, even if no plant detected
                 if (cnn != null) {
-                    val analysisBitmap = usedCrop ?: bitmap // Use crop if available, else original
-
                     try {
+                        val analysisBitmap = usedCrop ?: bitmap
                         val result = withContext(Dispatchers.Default) {
-                            cnn?.predict(analysisBitmap)
+                            cnn?.classify(analysisBitmap)
                         }
 
-                        if (result != null && result.maturity != "error" && result.health != "error" && result.variant != "error") {
+                        if (result != null) {
                             fullReport.append("   • 🌿 Plant Analysis:\n")
                             fullReport.append("     - Maturity: ${formatLabel(result.maturity)}\n")
                             fullReport.append("     - Health: ${formatLabel(result.health)}\n")
                             fullReport.append("     - Variant: ${formatLabel(result.variant)}\n")
+                            fullReport.append("     - Confidence: ${"%.1f".format(result.confidence * 100)}%\n")
 
-                            // Map maturity to stage
-                            val stageInt = when (result.maturity.lowercase(Locale.getDefault())) {
-                                "premature", "early" -> 1
-                                "near-harvest", "medium" -> 2
-                                "harvest-ready", "mature", "late" -> 3
-                                else -> 1
+                            // Map maturity to stage only if plant was detected
+                            if (plantDetected) {
+                                val stageInt = when (result.maturity.lowercase(Locale.getDefault())) {
+                                    "premature", "early" -> 1
+                                    "near-harvest", "medium" -> 2
+                                    "harvest-ready", "mature", "late" -> 3
+                                    else -> 1
+                                }
+                                averageStage += stageInt
+                                totalDetections++
                             }
-                            averageStage += stageInt
-                            totalDetections++
                             processedCount++
                         } else {
                             fullReport.append("   • 🌿 Plant Analysis: Failed or inconclusive\n")
@@ -974,13 +958,11 @@ class ConversationsActivity : AppCompatActivity() {
                 Log.e("AI Processing", "Error processing image $uri", e)
                 fullReport.append("❌ Image ${index + 1}: Processing error - ${e.message}\n\n")
             } finally {
-                // Clean up bitmaps to avoid memory leaks
                 bitmap?.recycle()
                 usedCrop?.recycle()
             }
         }
 
-        // Update plant stage if we have detections
         if (totalDetections > 0) {
             val avgStage = (averageStage / totalDetections).toInt().coerceIn(1, 3)
             withContext(Dispatchers.Main) {
@@ -990,7 +972,6 @@ class ConversationsActivity : AppCompatActivity() {
             }
         }
 
-        // Final report summary
         if (processedCount > 0) {
             fullReport.insert(0, "✅ Successfully analyzed $processedCount/${persistedUris.size} images\n\n")
         } else {
@@ -1009,7 +990,6 @@ class ConversationsActivity : AppCompatActivity() {
             )
         )
 
-        // Update UI
         withContext(Dispatchers.Main) {
             addConversationCard(persistedUris, diagnostic, timestamp)
             val message = if (processedCount > 0) {
@@ -1018,6 +998,9 @@ class ConversationsActivity : AppCompatActivity() {
                 "Analysis completed with limited results"
             }
             Toast.makeText(this@ConversationsActivity, message, Toast.LENGTH_LONG).show()
+
+            // Debug: Show what was actually processed
+            Log.d("AI_DEBUG", "Final report:\n$diagnostic")
         }
     }
 
@@ -1062,17 +1045,23 @@ class ConversationsActivity : AppCompatActivity() {
 
     // Change requirement: allow processing if at least one model is available
     private fun areModelsAvailable(): Boolean {
-        val available = (yolo != null || cnn != null)
-        Log.d("ModelCheck", "areModelsAvailable -> $available (YOLO=${yolo != null}, CNN=${cnn != null}, modelsLoaded=$modelsLoaded)")
-        return available
+        val cnnReady = cnn != null
+        val yoloReady = yolo != null
+
+        Log.d("ModelCheck", "CNN ready: $cnnReady, YOLO ready: $yoloReady")
+
+        return cnnReady || yoloReady // At least one model should be available
     }
 
     // Helper
     private fun formatLabel(label: String): String {
         return label.replace("-", " ")
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+            .replace("_", " ")
+            .replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(Locale.getDefault())
+                else it.toString()
+            }
     }
-
     private fun showModelErrorDialog(error: String) {
         AlertDialog.Builder(this)
             .setTitle("AI Models Not Available")
@@ -1081,24 +1070,301 @@ class ConversationsActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun debugModelStatus() {
-        val status = """
-        Model Status:
-        - YOLO Loaded: ${yolo != null}
-        - CNN Loaded: ${cnn != null}
-        - Models Loaded Flag: $modelsLoaded
-        - Loading in Progress: $modelLoadingInProgress
-    """.trimIndent()
+    // Testing section
+    private fun setupTesting() {
+        // Add a hidden test trigger - triple tap on the title
+        conversationTitle.setOnClickListener {
+            testClickCount++
+            if (testClickCount >= 3) {
+                testClickCount = 0
+                showTestMenu()
+            }
+        }
+    }
 
-        Log.d("ModelDebug", status)
+    private var testClickCount = 0
 
-        // Show in UI for debugging
-        Toast.makeText(this, "YOLO: ${yolo != null}, CNN: ${cnn != null}", Toast.LENGTH_LONG).show()
+    private fun showTestMenu() {
+        val testOptions = arrayOf(
+            "Quick Model Test",
+            "Full Integration Test",
+            "Model Status Check",
+            "Test with Real Image",
+            "Comprehensive Test"  // Add this
+        )
+
+        AlertDialog.Builder(this)
+            .setTitle("🧪 Model Testing")
+            .setItems(testOptions) { _, which ->
+                when (which) {
+                    0 -> runQuickTest()
+                    1 -> runFullIntegrationTest()
+                    2 -> checkModelStatus()
+                    3 -> lifecycleScope.launch { testWithRealImage() }
+                    4 -> runComprehensiveTest()  // Add this
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun runQuickTest() {
+        lifecycleScope.launch {
+            showTestProgress("Running Quick Test...")
+
+            try {
+                // Wait for models to load
+                if (!waitForModels()) {
+                    showTestResult("❌ Models not loaded")
+                    return@launch
+                }
+
+                // Create test bitmap
+                val testBitmap = createTestBitmap()
+
+                // Test basic prediction
+                val result = cnn?.classify(testBitmap)
+
+                if (result != null) {
+                    val testResult = """
+                    ✅ QUICK TEST PASSED
+                    
+                    Maturity: ${result.maturity}
+                    Health: ${result.health}  
+                    Variant: ${result.variant}
+                    Confidence: ${"%.1f".format(result.confidence * 100)}%
+                    
+                    All predictions received successfully!
+                """.trimIndent()
+                    showTestResult(testResult)
+
+                    // Log for debugging
+                    Log.d("TEST_QUICK", "Maturity: ${result.maturity}")
+                    Log.d("TEST_QUICK", "Health: ${result.health}")
+                    Log.d("TEST_QUICK", "Variant: ${result.variant}")
+                    Log.d("TEST_QUICK", "Confidence: ${result.confidence}")
+
+                } else {
+                    showTestResult("❌ Prediction returned null")
+                }
+
+                testBitmap.recycle()
+
+            } catch (e: Exception) {
+                showTestResult("❌ Test Failed: ${e.message}")
+                Log.e("TEST_QUICK", "Error: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun runFullIntegrationTest() {
+        lifecycleScope.launch {
+            showTestProgress("Running Full Integration Test...")
+
+            try {
+                if (!waitForModels()) {
+                    showTestResult("❌ Models not loaded")
+                    return@launch
+                }
+
+                val testBitmap = createTestBitmap()
+                val testResults = StringBuilder()
+                testResults.append("🧪 FULL INTEGRATION TEST\n\n")
+
+                // Test 1: Basic prediction
+                testResults.append("1. Basic Prediction:\n")
+                val basicResult = cnn?.classify(testBitmap)
+                if (basicResult != null) {
+                    testResults.append("   ✅ SUCCESS\n")
+                    testResults.append("   - Maturity: ${basicResult.maturity}\n")
+                    testResults.append("   - Health: ${basicResult.health}\n")
+                    testResults.append("   - Variant: ${basicResult.variant}\n")
+                    testResults.append("   - Confidence: ${"%.1f".format(basicResult.confidence * 100)}%\n")
+                } else {
+                    testResults.append("   ❌ FAILED\n")
+                }
+
+                testBitmap.recycle()
+                showTestResult(testResults.toString())
+
+            } catch (e: Exception) {
+                showTestResult("❌ Integration Test Failed: ${e.message}")
+                Log.e("TEST_FULL", "Error: ${e.message}", e)
+            }
+        }
     }
 
     private fun checkModelStatus() {
+        val status = """
+        🔍 MODEL STATUS CHECK
+        
+        CNN Model: ${if (cnn != null) "✅ LOADED" else "❌ NOT LOADED"}
+        YOLO Model: ${if (yolo != null) "✅ LOADED" else "❌ NOT LOADED"}
+        Models Flag: $modelsLoaded
+        Loading in Progress: $modelLoadingInProgress
+        
+        ${if (cnn != null && yolo != null) "🎉 All models ready!" else "⚠️ Some models missing"}
+    """.trimIndent()
+
+        showTestResult(status)
+    }
+
+    private suspend fun testWithRealImage() {
+        showTestProgress("Testing with real image...")
+
+        try {
+            // Try to use the first uploaded image if available
+            if (uploadedUris.isNotEmpty()) {
+                val testUri = uploadedUris.first()
+                val testBitmap = loadBitmapFromUri(testUri)
+
+                if (testBitmap != null) {
+                    val result = cnn?.classify(testBitmap)
+
+                    val testResult = """
+                    📸 REAL IMAGE TEST
+                    
+                    Image: ${testUri.lastPathSegment}
+                    Maturity: ${result?.maturity ?: "N/A"}
+                    Health: ${result?.health ?: "N/A"}
+                    Variant: ${result?.variant ?: "N/A"}
+                    Confidence: ${result?.confidence?.let { "%.1f".format(it * 100) } ?: "N/A"}%
+                    
+                    ${if (result != null) "✅ Analysis completed" else "❌ Analysis failed"}
+                """.trimIndent()
+
+                    showTestResult(testResult)
+                    testBitmap.recycle()
+                } else {
+                    showTestResult("❌ Could not load image from URI")
+                }
+            } else {
+                showTestResult("ℹ️ No images available for testing\n\nUpload an image first, then test again.")
+            }
+        } catch (e: Exception) {
+            showTestResult("❌ Real image test failed: ${e.message}")
+        }
+    }
+
+    // Helper functions
+    private fun createTestBitmap(): Bitmap {
+        return Bitmap.createBitmap(224, 224, Bitmap.Config.ARGB_8888).apply {
+            // Create a simple green gradient for testing
+            for (x in 0 until width) {
+                for (y in 0 until height) {
+                    val green = (150 + (x * 100 / width)).coerceIn(0, 255)
+                    val pixel = Color.argb(255, 50, green, 50)
+                    setPixel(x, y, pixel)
+                }
+            }
+        }
+    }
+
+    private fun showTestProgress(message: String) {
+        runOnUiThread {
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showTestResult(message: String) {
+        runOnUiThread {
+            AlertDialog.Builder(this)
+                .setTitle("Test Results")
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .show()
+        }
+    }
+
+    private fun runComprehensiveTest() {
         lifecycleScope.launch {
-            debugModelStatus()
+            showTestProgress("Running Comprehensive Test...")
+
+            val testResults = StringBuilder()
+            testResults.append("🧪 COMPREHENSIVE MODEL TEST\n\n")
+
+            try {
+                // Test 1: Model Loading
+                testResults.append("1. MODEL LOADING:\n")
+                if (!waitForModels()) {
+                    testResults.append("   ❌ Models failed to load\n")
+                    showTestResult(testResults.toString())
+                    return@launch
+                }
+                testResults.append("   ✅ Models loaded successfully\n")
+                testResults.append("   - YOLO: ${yolo != null}\n")
+                testResults.append("   - CNN: ${cnn != null}\n\n")
+
+                // Test 2: YOLO Detection
+                testResults.append("2. YOLO DETECTION TEST:\n")
+                if (yolo != null) {
+                    try {
+                        val testBitmap = createTestBitmap()
+                        val detection = withContext(Dispatchers.Default) {
+                            yolo?.detect(testBitmap)
+                        }
+                        if (detection != null) {
+                            testResults.append("   ✅ YOLO working - detected: ${detection.label} (${"%.1f".format(detection.score * 100)}%)\n")
+                        } else {
+                            testResults.append("   ⚠️ YOLO working but no detection\n")
+                        }
+                        testBitmap.recycle()
+                    } catch (e: Exception) {
+                        testResults.append("   ❌ YOLO test failed: ${e.message}\n")
+                    }
+                } else {
+                    testResults.append("   ❌ YOLO not available\n")
+                }
+
+                // Test 3: CNN Classification
+                testResults.append("\n3. CNN CLASSIFICATION TEST:\n")
+                if (cnn != null) {
+                    try {
+                        val testBitmap = createTestBitmap()
+                        val result = withContext(Dispatchers.Default) {
+                            cnn?.classify(testBitmap)
+                        }
+                        if (result != null) {
+                            testResults.append("   ✅ CNN working\n")
+                            testResults.append("   - Maturity: ${result.maturity}\n")
+                            testResults.append("   - Health: ${result.health}\n")
+                            testResults.append("   - Variant: ${result.variant}\n")
+                            testResults.append("   - Confidence: ${"%.1f".format(result.confidence * 100)}%\n")
+                        } else {
+                            testResults.append("   ❌ CNN returned null\n")
+                        }
+                        testBitmap.recycle()
+                    } catch (e: Exception) {
+                        testResults.append("   ❌ CNN test failed: ${e.message}\n")
+                    }
+                } else {
+                    testResults.append("   ❌ CNN not available\n")
+                }
+
+                // Test 4: Asset Files
+                testResults.append("\n4. ASSET FILES CHECK:\n")
+                val assetsToCheck = listOf(
+                    "ml/yolov8.tflite",
+                    "ml/cnn_lstm_mobile.pt",
+                    "ml/yolo_labels.json",
+                    "ml/label_maps.json",
+                    "ml/numeric_cols.json"
+                )
+
+                assetsToCheck.forEach { asset ->
+                    try {
+                        assets.open(asset).close()
+                        testResults.append("   ✅ $asset\n")
+                    } catch (e: Exception) {
+                        testResults.append("   ❌ $asset - ${e.message}\n")
+                    }
+                }
+
+            } catch (e: Exception) {
+                testResults.append("\n❌ Comprehensive test failed: ${e.message}")
+            }
+
+            showTestResult(testResults.toString())
         }
     }
 }

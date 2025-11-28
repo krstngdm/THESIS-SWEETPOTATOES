@@ -20,6 +20,7 @@ import androidx.room.Room
 import com.ai.growsight.ConversationsActivity.Companion.EXTRA_CONVERSATION_ID
 import com.ai.growsight.ConversationsActivity.Companion.EXTRA_IMAGE_URIS
 import com.ai.growsight.ai.MaturityClassifier
+import com.ai.growsight.ai.ModelManager
 import com.ai.growsight.ai.YoloDetector
 import com.ai.growsight.data.AppDatabase
 import com.ai.growsight.data.ConversationEntity
@@ -160,38 +161,22 @@ class UploadActivity : AppCompatActivity() {
         modelLoadingInProgress = true
         lifecycleScope.launch {
             try {
-                Log.d("UploadActivity", "Starting model loading...")
+                Log.d("UploadActivity", "Starting model loading using ModelManager...")
 
-                // Load YOLO
-                yoloDetector = try {
-                    YoloDetector(this@UploadActivity).also {
-                        Log.d("UploadActivity", "✓ YOLO loaded successfully")
-                    }
-                } catch (e: Exception) {
-                    Log.e("UploadActivity", "✗ YOLO failed: ${e.message}", e)
-                    null
-                }
-
-                // Load CNN
-                maturityClassifier = try {
-                    MaturityClassifier(this@UploadActivity).also {
-                        Log.d("UploadActivity", "✓ CNN loaded successfully")
-                    }
-                } catch (e: Exception) {
-                    Log.e("UploadActivity", "✗ CNN failed: ${e.message}", e)
-                    null
-                }
+                // Use ModelManager to load models
+                yoloDetector = ModelManager.getYoloDetector(this@UploadActivity)
+                maturityClassifier = ModelManager.getMaturityClassifier(this@UploadActivity)
 
                 modelsLoaded = (yoloDetector != null || maturityClassifier != null)
                 modelLoadingInProgress = false
 
-                Log.d("UploadActivity", "Model loading finished. YOLO=${yoloDetector != null}, CNN=${maturityClassifier != null}")
+                Log.d("UploadActivity", "ModelManager loading finished. YOLO=${yoloDetector != null}, CNN=${maturityClassifier != null}")
 
                 runOnUiThread {
                     updateUIForModelStatus()
                 }
             } catch (e: Exception) {
-                Log.e("UploadActivity", "Failed to load models: ${e.message}", e)
+                Log.e("UploadActivity", "Failed to load models using ModelManager: ${e.message}", e)
                 modelLoadingInProgress = false
                 runOnUiThread {
                     showModelErrorDialog("Failed to load AI models: ${e.message}")
@@ -434,11 +419,6 @@ class UploadActivity : AppCompatActivity() {
             yoloDetector?.close()
         } catch (e: Exception) {
             Log.e("UploadActivity", "Error closing YOLO", e)
-        }
-        try {
-            maturityClassifier?.close()
-        } catch (e: Exception) {
-            Log.e("UploadActivity", "Error closing CNN", e)
         }
     }
 }
