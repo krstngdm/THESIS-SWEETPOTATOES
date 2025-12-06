@@ -1,5 +1,6 @@
 [versions]
 agp = "8.10.0"
+androidSpinkit = "1.4.0"
 kotlin = "2.0.21"
 coreKtx = "1.16.0"
 junit = "4.13.2"
@@ -15,6 +16,7 @@ tensorflowLiteMetadata = "0.1.0"
 cardview = "1.0.0"
 
 [libraries]
+android-spinkit = { module = "com.github.ybq:Android-SpinKit", version.ref = "androidSpinkit" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

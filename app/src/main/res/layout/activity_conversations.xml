@@ -1,5 +1,6 @@
 <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -38,9 +39,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Testing texting"
-                android:textSize="18sp"
+                android:textSize="15sp"
                 android:textColor="@color/white"
                 android:gravity="center"
+                android:fontFamily="@font/poppins_bold"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -89,29 +91,20 @@
                 android:padding="12dp">
 
                 <!-- Instruction Text -->
+
                 <TextView
                     android:id="@+id/instructionText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Upload the Images of your own sweet potato crop"
-                    android:textColor="@color/black"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:gravity="center"
                     android:layout_marginTop="200dp"
                     android:layout_marginBottom="40dp"
-                    android:padding="16dp"/>
+                    android:fontFamily="@font/poppins_bold"
+                    android:gravity="center"
+                    android:padding="16dp"
+                    android:text="Upload the Images of your own sweet potato crop"
+                    android:textColor="@color/black"
+                    android:textSize="25sp" />
 
-                <com.github.ybq.android.spinkit.SpinKitView
-                    android:id="@+id/wave_loader"
-                    style="@style/SpinKitView.Wave"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:layout_gravity="center"
-                    app:SpinKit_Color="@color/primaryColor" />
-
-
-                <!-- Uploaded images (optional, keep if you still show them) -->
                 <LinearLayout
                     android:id="@+id/uploadedImagesContainer"
                     android:layout_width="match_parent"
@@ -128,6 +121,16 @@
                     android:orientation="vertical"
                     android:layout_marginTop="8dp"
                     android:padding="8dp" />
+
+
+                <com.github.ybq.android.spinkit.SpinKitView
+                    android:id="@+id/wave_loader"
+                    style="@style/SpinKitView.Wave"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:layout_gravity="center"
+                    app:SpinKit_Color="@color/gd_1"
+                    tools:ignore="MissingClass" />
             </LinearLayout>
         </ScrollView>
 

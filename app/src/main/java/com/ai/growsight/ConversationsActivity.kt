@@ -1,5 +1,6 @@
 package com.ai.growsight
 
+import com.github.ybq.android.spinkit.SpinKitView
 import android.Manifest
 import android.app.AlertDialog
 import android.app.Dialog
@@ -52,11 +53,6 @@ class ConversationsActivity : AppCompatActivity() {
         const val CAMERA_PERMISSION_CODE = 3001
         const val EXTRA_IMAGE_URIS = "extra_image_uris"
         val sentUris = mutableSetOf<String>() // keeps track of already-sent images
-
-        // Track if models are already loaded from UploadActivity
-        var modelsLoadedFromUpload: Boolean = false
-        var sharedYolo: YoloDetector? = null
-        var sharedCnn: MaturityClassifier? = null
     }
 
     private lateinit var uploadedImagesContainer: LinearLayout
@@ -71,6 +67,7 @@ class ConversationsActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var messagesContainer: LinearLayout
     private lateinit var instructionText: TextView
+    private lateinit var loader: SpinKitView
 
     private val uploadedUris = mutableListOf<Uri>()
     private var cameraImageUri: Uri? = null
@@ -82,8 +79,14 @@ class ConversationsActivity : AppCompatActivity() {
     private var yolo: YoloDetector? = null
     private var cnn: MaturityClassifier? = null
     private var modelsLoaded = false
-    private var modelLoadingInProgress = false
-    private val modelLoadCallbacks = mutableListOf<() -> Unit>()
+
+    // Define week ranges based on training
+    private val weekRanges = mapOf(
+        "Early (1-3)" to Pair(1, 3),
+        "Middle (4-8)" to Pair(4, 8),
+        "Ready (9-12)" to Pair(9, 12),
+        "Mature (13-16)" to Pair(13, 16)
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,6 +95,8 @@ class ConversationsActivity : AppCompatActivity() {
         // Initialize message container and instruction text
         messagesContainer = findViewById(R.id.messagesContainer)
         instructionText = findViewById(R.id.instructionText)
+
+        loader = findViewById(R.id.wave_loader)
 
         // Room DB setup
         db = Room.databaseBuilder(
@@ -119,8 +124,24 @@ class ConversationsActivity : AppCompatActivity() {
         val addConversationButton = findViewById<ImageButton>(R.id.addConversationButton)
         val editTitleButton = findViewById<ImageButton>(R.id.editTitleButton)
 
-        // Load models asynchronously at startup
-        loadModels()
+        val yoloAvailable = intent.getBooleanExtra("yolo_available", false)
+        val cnnAvailable = intent.getBooleanExtra("cnn_available", false)
+
+        yolo = ModelManager.getYoloDetector()
+        cnn = ModelManager.getMaturityClassifier()
+
+        if (!yoloAvailable || !cnnAvailable) {
+            Log.w("ConversationsActivity", "Intent says models not available, but checking ModelManager...")
+        }
+
+        updateUIForModelStatus()
+
+        if (yolo == null && cnn == null) {
+            Log.w("ConversationsActivity", "No models available - using fallback mode")
+            showModelErrorDialog("AI models not available. You can still save images without AI analysis.")
+        } else {
+            Log.d("ConversationsActivity", "Using globally loaded models: YOLO=${yolo != null}, CNN=${cnn != null}")
+        }
 
         // Set click listener for adding new conversation
         addConversationButton.setOnClickListener {
@@ -145,7 +166,13 @@ class ConversationsActivity : AppCompatActivity() {
         }
 
         // Handle incoming images from MainActivity
-        val incomingUris = intent.getParcelableArrayListExtra<Uri>(EXTRA_IMAGE_URIS)
+        val incomingUris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableArrayListExtra(EXTRA_IMAGE_URIS, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableArrayListExtra(EXTRA_IMAGE_URIS)
+        }
+
         lifecycleScope.launch {
             handleIncomingImages(incomingUris)
         }
@@ -301,6 +328,9 @@ class ConversationsActivity : AppCompatActivity() {
             }
 
             if (areModelsAvailable()) {
+                // Show loader and disable buttons
+                showLoader()
+
                 // Use AI processing (if at least one model available)
                 lifecycleScope.launch {
                     processImagesWithAI(persisted)
@@ -322,6 +352,10 @@ class ConversationsActivity : AppCompatActivity() {
 
                     withContext(Dispatchers.Main) {
                         addConversationCard(persisted, diagnostic, timestamp)
+
+                        // ADD THIS: Scroll to show the new card
+                        scrollToBottom()
+
                         Toast.makeText(this@ConversationsActivity, "Images saved (AI unavailable)", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -341,61 +375,57 @@ class ConversationsActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadModels() {
-        if (modelLoadingInProgress) {
-            Log.d("ModelLoad", "Model loading already in progress")
-            return
-        }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        modelLoadingInProgress = true
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                Log.d("ModelLoad", "Starting model loading using ModelManager...")
-
-                // Use the shared model instances from ModelManager
-                yolo = ModelManager.getYoloDetector(this@ConversationsActivity)
-                cnn = ModelManager.getMaturityClassifier(this@ConversationsActivity)
-
-                modelsLoaded = true
-                modelLoadingInProgress = false
-
-                Log.d("ModelLoad", "ModelManager loading finished. YOLO=${yolo != null}, CNN=${cnn != null}")
-
-                withContext(Dispatchers.Main) {
-                    updateUIForModelStatus()
-                    modelLoadCallbacks.forEach { it.invoke() }
-                    modelLoadCallbacks.clear()
-
-                    // Show model status
-                    val status = when {
-                        yolo != null && cnn != null -> "✓ All AI models loaded"
-                        yolo != null -> "✓ Object detection ready"
-                        cnn != null -> "✓ Plant analysis ready"
-                        else -> "⚠ AI models unavailable"
-                    }
-                    Toast.makeText(this@ConversationsActivity, status, Toast.LENGTH_SHORT).show()
+        when (requestCode) {
+            CAMERA_PERMISSION_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    openCamera()
+                } else {
+                    Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                Log.e("ModelLoad", "Failed to load models using ModelManager: ${e.message}", e)
-                modelLoadingInProgress = false
-                withContext(Dispatchers.Main) {
-                    showError("Failed to load AI models: ${e.message}")
+            }
+            READ_STORAGE_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    openGallery()
+                } else {
+                    Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-    private suspend fun waitForModels(): Boolean {
-        if (modelsLoaded) return true
+    private fun showLoader() {
+        runOnUiThread {
+            loader.visibility = View.VISIBLE
+            // Disable buttons during processing
+            sendButton.isEnabled = false
+            uploadButton.isEnabled = false
+            cameraButton.isEnabled = false
+        }
+    }
 
+    private fun hideLoader() {
+        runOnUiThread {
+            loader.visibility = View.GONE
+            // Re-enable buttons after processing
+            sendButton.isEnabled = true
+            uploadButton.isEnabled = true
+            cameraButton.isEnabled = true
+        }
+    }
+
+    private suspend fun waitForModels(): Boolean {
+        // Models are already loaded globally, just check if they're available
         return withContext(Dispatchers.IO) {
-            var waited = 0
-            val maxWait = 100 // 10 seconds
-            while (!modelsLoaded && waited < maxWait && !modelLoadingInProgress) {
-                delay(100)
-                waited++
-            }
-            modelsLoaded
+            // Give a brief moment for any initialization
+            delay(100)
+            ModelManager.areModelsAvailable()
         }
     }
 
@@ -425,6 +455,7 @@ class ConversationsActivity : AppCompatActivity() {
         if (conversationId == -1L && !incomingUris.isNullOrEmpty()) {
             try {
                 Log.d("ConversationsActivity", "Processing ${incomingUris.size} incoming images")
+                showLoader()
 
                 // Create new conversation first
                 val count = db.conversationDao().getConversationCount()
@@ -438,19 +469,9 @@ class ConversationsActivity : AppCompatActivity() {
                 }
                 refreshConversationList()
 
-                // Wait for models to be properly loaded
-                if (!waitForModels()) {
-                    Log.w("ModelWait", "Models not available after waiting, using fallback")
-                    fallbackSaveImages(incomingUris, "AI models not ready")
-                    return
-                }
-
+                // Use the globally loaded models - no waiting needed
                 val persistedUris: List<Uri> = incomingUris.mapNotNull {
-                    val localUri = ensureLocalCopy(it)
-                    if (localUri == null) {
-                        Log.e("FileCopy", "Failed to copy URI: $it")
-                    }
-                    localUri
+                    ensureLocalCopy(it)
                 }
 
                 Log.d("ConversationsActivity", "Successfully persisted ${persistedUris.size} uris")
@@ -459,6 +480,7 @@ class ConversationsActivity : AppCompatActivity() {
                     if (areModelsAvailable()) {
                         processImagesWithAI(persistedUris)
                     } else {
+                        hideLoader()
                         fallbackSaveImages(persistedUris, "AI models not available")
                     }
                 } else {
@@ -467,13 +489,14 @@ class ConversationsActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 Log.e("ConversationsActivity", "Failed to process incoming images", e)
+                hideLoader()
                 fallbackSaveImages(incomingUris, e.message ?: "Unknown error")
             }
         }
     }
 
     // Fixed function to update arrow position based on AI-predicted stage
-    fun setPlantStage(stage: Int, totalStages: Int = 3) {
+    fun setPlantStage(stage: Int, totalStages: Int = 4) { // Changed to 4 stages
         runOnUiThread {
             val gradientView = findViewById<View>(R.id.cardStageGradient)
             val arrow = findViewById<ImageView>(R.id.stageArrow)
@@ -484,7 +507,7 @@ class ConversationsActivity : AppCompatActivity() {
                 return@runOnUiThread
             }
 
-            // Ensure stage is within bounds (1-3)
+            // Ensure stage is within bounds (1-4)
             val clampedStage = stage.coerceIn(1, totalStages)
 
             // Wait until the layout is drawn to get width
@@ -498,7 +521,7 @@ class ConversationsActivity : AppCompatActivity() {
                 val gradientWidth = gradientView.width.toFloat()
                 val arrowWidth = arrow.width.toFloat()
 
-                // Calculate arrow X position for 3 stages
+                // Calculate arrow X position for 4 stages
                 val positionX = (clampedStage.toFloat() / totalStages) * gradientWidth - (arrowWidth / 2)
 
                 // Move arrow
@@ -561,11 +584,6 @@ class ConversationsActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            yolo?.close()
-        } catch (e: Exception) {
-            Log.e("YOLO", "Error closing YOLO", e)
-        }
     }
 
     private fun showCreateConversationDialog() {
@@ -743,33 +761,70 @@ class ConversationsActivity : AppCompatActivity() {
         }
     }
 
-    private fun addConversationCard(images: List<Uri>, diagnostic: String, timestamp: String) {
+    private fun addConversationCard(images: List<Uri>, diagnostic: String, timestamp: String, weekNumber: Int? = null) {
         val card = layoutInflater.inflate(R.layout.item_conversation_card, uploadedImagesContainer, false)
         val imageRow = card.findViewById<LinearLayout>(R.id.cardImageRow)
+        val cardDiagnostic = card.findViewById<TextView>(R.id.cardDiagnostic)
+        val cardTimestamp = card.findViewById<TextView>(R.id.cardTimestamp)
+        val stageArrow = card.findViewById<ImageView>(R.id.stageArrow)
+        val stageGradient = card.findViewById<View>(R.id.cardStageGradient)
+
+        // Add images
         images.forEach { uri ->
             val img = ImageView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(400, 400).apply { setMargins(8, 8, 8, 8) }
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 setImageURI(uri)
-
-                // Make image clickable
-                setOnClickListener {
-                    showImageModal(uri)
-                }
-
-                // Visual feedback
+                setOnClickListener { showImageModal(uri) }
                 isClickable = true
             }
             imageRow.addView(img)
         }
-        card.findViewById<TextView>(R.id.cardDiagnostic).text = diagnostic
-        card.findViewById<TextView>(R.id.cardTimestamp).text = timestamp
+
+        cardDiagnostic.text = diagnostic
+        cardTimestamp.text = timestamp
+
+        // Position arrow based on week number if available
+        if (weekNumber != null) {
+            Log.d("WeekArrow", "Setting arrow position for week: $weekNumber")
+
+            // Wait for layout to be measured
+            stageGradient.post {
+                if (stageGradient.width > 0 && stageArrow.width > 0) {
+                    // Calculate position based on week (1-16) mapped to gradient width
+                    val gradientWidth = stageGradient.width.toFloat()
+                    val arrowWidth = stageArrow.width.toFloat()
+
+                    // Map week 1-16 to position 0% to 100%
+                    // Week 1 = leftmost, Week 16 = rightmost
+                    val positionPercentage = (weekNumber - 1) / 15f // 0.0 to 1.0
+
+                    // Calculate X position
+                    val positionX = positionPercentage * gradientWidth - (arrowWidth / 2)
+
+                    // Clamp position to stay within bounds
+                    val clampedPosition = positionX.coerceIn(0f, gradientWidth - arrowWidth)
+
+                    stageArrow.translationX = clampedPosition
+
+                    Log.d("WeekArrow", "Week $weekNumber -> Gradient width: $gradientWidth, Position: $clampedPosition")
+                } else {
+                    Log.w("WeekArrow", "Views not measured yet, skipping arrow positioning")
+                }
+            }
+        } else {
+            Log.d("WeekArrow", "No week number available for arrow positioning")
+        }
+
         uploadedImagesContainer.addView(card)
 
         // Hide instruction when there are cards
         if (uploadedImagesContainer.childCount > 0) {
             hideInstruction()
         }
+
+        // Scroll to bottom after adding card
+        scrollToBottom()
     }
 
     private fun showImageModal(uri: Uri) {
@@ -835,25 +890,42 @@ class ConversationsActivity : AppCompatActivity() {
         }
     }
 
+    private fun makeBold(text: String): String {
+        return "<b>$text</b>"
+    }
+
     private suspend fun processImagesWithAI(persistedUris: List<Uri>) {
+        showLoader()
+
         withContext(Dispatchers.Main) {
             Toast.makeText(this@ConversationsActivity, "Starting AI analysis...", Toast.LENGTH_SHORT).show()
         }
 
         if (!waitForModels()) {
             Log.w("AI Processing", "Models not available after waiting, using fallback")
+            hideLoader()
             fallbackSaveImages(persistedUris, "AI models not ready")
             return
         }
 
         val timestamp = SimpleDateFormat("MM/dd/yyyy HH:mm", Locale.getDefault()).format(Date())
-        val fullReport = StringBuilder("🌱 Plant Diagnostic Report - $timestamp\n\n")
+        val fullReport = StringBuilder(
+            "                    ────────────────────────\n\n"
+        )
 
         var totalDetections = 0
         var averageStage = 0f
         var processedCount = 0
+        var plantDetectedInAnyImage = false
+        var weekRangeCounts = mutableMapOf<String, Int>()
+        var maturityCounts = mutableMapOf<String, Int>()
+        var healthCounts = mutableMapOf<String, Int>()
+        var variantCounts = mutableMapOf<String, Int>()
 
-        // Process each image independently
+        // NEW: Store actual week numbers for arrow positioning
+        val weekNumbers = mutableListOf<Int>()
+        val weekRangesFromAI = mutableListOf<String>()
+
         for ((index, uri) in persistedUris.withIndex()) {
             var bitmap: Bitmap? = null
             var usedCrop: Bitmap? = null
@@ -861,40 +933,54 @@ class ConversationsActivity : AppCompatActivity() {
             try {
                 Log.d("AI Processing", "Processing image ${index + 1}/${persistedUris.size}: $uri")
 
-                // Load bitmap
                 bitmap = loadBitmapFromUri(uri)
                 if (bitmap == null) {
                     fullReport.append("❌ Image ${index + 1}: Could not load image\n\n")
                     continue
                 }
 
-                fullReport.append("📸 Image ${index + 1}\n")
+                fullReport.append("   📸 Image ${index + 1}\n")
                 Log.d("AI Processing", "Bitmap loaded: ${bitmap.width}x${bitmap.height}")
 
                 var detection: YoloDetector.Detection? = null
                 var plantDetected = false
 
-                // YOLO Detection
+                // YOLO Detection with new model
                 if (yolo != null) {
                     try {
-                        detection = withContext(Dispatchers.Default) {
-                            yolo?.detect(bitmap)
+                        val detections = withContext(Dispatchers.Default) {
+                            yolo?.detect(bitmap) ?: emptyList()
                         }
 
-                        if (detection != null) {
-                            plantDetected = true
-                            fullReport.append("   • 🔍 Object Detection: ${detection.label} (${"%.1f".format(detection.score * 100)}% confidence)\n")
-                            Log.d("YOLO Detection", "Found: ${detection.label} with ${detection.score}")
+                        if (detections.isNotEmpty()) {
 
-                            // Crop detected area
+                            // Pick highest-confidence detection
+                            val detection = detections.maxByOrNull { it.score }
+
+                            plantDetected = true
+                            plantDetectedInAnyImage = true
+                            totalDetections++
+
+                            fullReport.append(
+                                "        • 🔍 Object Detection: ${detection!!.label} " +
+                                        "(${ "%.1f".format(detection.score * 100) }% confidence)\n"
+                            )
+
+                            Log.d(
+                                "YOLO Detection",
+                                "Found: ${detection.label} with ${detection.score}"
+                            )
+
+                            // --- Crop with bounds checking ---
                             val left = detection.box.left.toInt().coerceIn(0, bitmap.width - 1)
                             val top = detection.box.top.toInt().coerceIn(0, bitmap.height - 1)
                             val right = detection.box.right.toInt().coerceIn(left + 1, bitmap.width)
                             val bottom = detection.box.bottom.toInt().coerceIn(top + 1, bitmap.height)
+
                             val width = right - left
                             val height = bottom - top
 
-                            if (width > 10 && height > 10) { // Minimum size threshold
+                            if (width > 10 && height > 10) {
                                 usedCrop = try {
                                     Bitmap.createBitmap(bitmap, left, top, width, height)
                                 } catch (e: Exception) {
@@ -902,20 +988,28 @@ class ConversationsActivity : AppCompatActivity() {
                                     null
                                 }
                             }
+
                         } else {
-                            fullReport.append("   • 🔍 Object Detection: No plant detected\n")
-                            Log.d("YOLO Detection", "No plant detected in image")
+                            fullReport.append("        • 🔍 Object Detection: ❌ No sweet potato plant detected\n")
+                            Log.d("YOLO Detection", "No detections found")
+                            fullReport.append("                • 🌿 Plant Analysis: ⏭️ Skipped - no plant detected\n\n")
+                            continue
                         }
+
                     } catch (e: Exception) {
                         Log.e("YOLO", "YOLO detection failed", e)
-                        fullReport.append("   • 🔍 Object Detection: Failed - ${e.message}\n")
+                        fullReport.append("        • 🔍 Object Detection: Failed - ${e.message}\n")
+                        fullReport.append("                • 🌿 Plant Analysis: ⏭️ Skipped - detection failed\n\n")
+                        continue
                     }
+
                 } else {
-                    fullReport.append("   • 🔍 Object Detection: Unavailable\n")
+                    fullReport.append("        • 🔍 Object Detection: Unavailable\n")
                 }
 
-                // CNN Analysis - always analyze, even if no plant detected
-                if (cnn != null) {
+
+                // CNN Analysis with new model
+                if (cnn != null && (plantDetected || yolo == null)) {
                     try {
                         val analysisBitmap = usedCrop ?: bitmap
                         val result = withContext(Dispatchers.Default) {
@@ -923,31 +1017,50 @@ class ConversationsActivity : AppCompatActivity() {
                         }
 
                         if (result != null) {
-                            fullReport.append("   • 🌿 Plant Analysis:\n")
-                            fullReport.append("     - Maturity: ${formatLabel(result.maturity)}\n")
-                            fullReport.append("     - Health: ${formatLabel(result.health)}\n")
-                            fullReport.append("     - Variant: ${formatLabel(result.variant)}\n")
-                            fullReport.append("     - Confidence: ${"%.1f".format(result.confidence * 100)}%\n")
+                            fullReport.append("                • 🌿 Plant Analysis:\n")
 
-                            // Map maturity to stage only if plant was detected
-                            if (plantDetected) {
-                                val stageInt = when (result.maturity.lowercase(Locale.getDefault())) {
-                                    "premature", "early" -> 1
-                                    "near-harvest", "medium" -> 2
-                                    "harvest-ready", "mature", "late" -> 3
-                                    else -> 1
-                                }
-                                averageStage += stageInt
-                                totalDetections++
-                            }
+                            // Get predictions including week
+                            val maturity = formatLabel(result.maturity)
+                            val health = formatLabel(result.health)
+                            val variant = formatLabel(result.variant)
+                            val weekNumber = result.week  // Week number (1-16)
+                            val weekRange = result.weekRange  // Week range (Early 1-3, etc.)
+
+                            fullReport.append("                          - Maturity: $maturity\n")
+                            fullReport.append("                          - Health: $health\n")
+                            fullReport.append("                          - Variant: $variant\n")
+                            fullReport.append("                          - Week: ($weekRange)\n")  // Added week info
+                            fullReport.append("                          - Confidence: ${"%.1f".format(result.confidence * 100)}%\n")
+
+                            // Count predictions for summary
+                            weekRangeCounts[weekRange] = weekRangeCounts.getOrDefault(weekRange, 0) + 1
+                            maturityCounts[maturity] = maturityCounts.getOrDefault(maturity, 0) + 1
+                            healthCounts[health] = healthCounts.getOrDefault(health, 0) + 1
+                            variantCounts[variant] = variantCounts.getOrDefault(variant, 0) + 1
+
+                            // NEW: Store week numbers and ranges for arrow positioning
+                            weekNumbers.add(weekNumber)
+                            weekRangesFromAI.add(weekRange)
+
+                            // Map to stage for UI (1-4 stages) using week number
+                            val stageInt = getStageFromWeekNumber(weekNumber)
+                            averageStage += stageInt
+
                             processedCount++
+
+                            // Debug log
+                            Log.d("WeekPrediction", "Predicted week: $weekNumber, range: $weekRange, stage: $stageInt")
                         } else {
                             fullReport.append("   • 🌿 Plant Analysis: Failed or inconclusive\n")
+                            // Don't count this as processed if CNN failed
                         }
                     } catch (e: Exception) {
                         Log.e("CNN", "CNN analysis failed", e)
                         fullReport.append("   • 🌿 Plant Analysis: Failed - ${e.message}\n")
+                        // Don't count this as processed if CNN failed
                     }
+                } else if (!plantDetected && yolo != null) {
+                    fullReport.append("   • 🌿 Plant Analysis: ⏭️ Skipped - no plant detected\n")
                 } else {
                     fullReport.append("   • 🌿 Plant Analysis: Unavailable\n")
                 }
@@ -963,21 +1076,111 @@ class ConversationsActivity : AppCompatActivity() {
             }
         }
 
-        if (totalDetections > 0) {
-            val avgStage = (averageStage / totalDetections).toInt().coerceIn(1, 3)
+        // CRITICAL: Check if any plants were detected at all
+        if (!plantDetectedInAnyImage && yolo != null) {
+            // No plants detected in any image - show user-friendly message and stop
+            val noPlantMessage = """
+            🌱 Plant Diagnostic Report - $timestamp
+            
+            ❌ No sweet potato plants detected
+            
+            We couldn't identify any sweet potato plants in your images.
+            
+            📝 Please try again with images that clearly show:
+            • Whole sweet potato plants or leaves
+            • Good lighting and clear focus
+            • Avoid blurry or dark images
+            • Make sure the plant is the main subject
+            
+            🔍 Processed ${persistedUris.size} image(s) - no plants found
+        """.trimIndent()
+
+            // Save the no-plant result to database
+            db.promptDao().insertPrompt(
+                PromptEntity(
+                    conversationId = conversationId,
+                    imageUris = persistedUris.map { it.toString() },
+                    diagnostic = noPlantMessage,
+                    timestamp = timestamp
+                )
+            )
+
             withContext(Dispatchers.Main) {
-                if (!isFinishing && !isDestroyed) {
-                    setPlantStage(avgStage, totalStages = 3)
+                addConversationCard(persistedUris, noPlantMessage, timestamp)
+                Toast.makeText(
+                    this@ConversationsActivity,
+                    "❌ No plants detected - please upload images with sweet potato plants",
+                    Toast.LENGTH_LONG
+                ).show()
+                hideLoader()
+            }
+            return // Stop further processing
+        }
+
+        // Generate summary based on counts
+        val header = StringBuilder()
+        header.append("🌱 SUMMARY - $timestamp\n\n")
+
+        if (plantDetectedInAnyImage) {
+            val imageWord = if (persistedUris.size > 1) "images" else "image"
+            val detectionWord = if (totalDetections > 1) "detections" else "detection"
+
+
+            header.append("✅ Plant Detected in $totalDetections $detectionWord out of ${persistedUris.size} $imageWord\n")
+            if (processedCount > 0) {
+                val avgStage = (averageStage / processedCount).toInt().coerceIn(1, 4)
+
+                // Find most common predictions
+                val mostCommonWeek = weekRangeCounts.maxByOrNull { it.value }?.key ?: "Unknown"
+                val mostCommonMaturity = maturityCounts.maxByOrNull { it.value }?.key ?: "Unknown"
+                val mostCommonHealth = healthCounts.maxByOrNull { it.value }?.key ?: "Unknown"
+                val mostCommonVariant = variantCounts.maxByOrNull { it.value }?.key ?: "Unknown"
+
+                // NEW: Calculate average week number for arrow positioning
+                val averageWeekNumber = if (weekNumbers.isNotEmpty()) {
+                    weekNumbers.average().toInt().coerceIn(1, 16)
+                } else null
+
+                // NEW: Only show "Most Common Predictions" section when there are multiple images
+                // OR when there are multiple valid predictions from a single image
+                if (persistedUris.size > 1 || (weekRangeCounts.size > 1 || maturityCounts.size > 1 ||
+                            healthCounts.size > 1 || variantCounts.size > 1)) {
+                    header.append("\n   📊 Most Common Predictions:\n")
+                    header.append("        • Growth Stage: $mostCommonWeek\n")
+                    header.append("        • Maturity: $mostCommonMaturity\n")
+                    header.append("        • Health: $mostCommonHealth\n")
+                    header.append("        • Variant: $mostCommonVariant\n")
+
+                    // NEW: Add week number information to summary
+                    if (averageWeekNumber != null) {
+                        header.append("        • Average Week Number: $averageWeekNumber\n")
+                    }
+                } else {
+                    // For single image with consistent predictions, just show the primary prediction
+                    if (mostCommonWeek != "Unknown") {
+                        header.append("\n📊 Primary Prediction:\n")
+                        header.append("        • Growth Stage: $mostCommonWeek\n")
+                        if (averageWeekNumber != null) {
+                            header.append("        • Week Number: $averageWeekNumber\n")
+                        }
+                    }
+                }
+
+                // Update UI with average stage
+                withContext(Dispatchers.Main) {
+                    if (!isFinishing && !isDestroyed) {
+                        setPlantStage(avgStage, totalStages = 4)
+                    }
                 }
             }
+        } else if (yolo == null) {
+            header.append("⚠️ Plant detection unavailable - using all images for analysis\n")
         }
 
-        if (processedCount > 0) {
-            fullReport.insert(0, "✅ Successfully analyzed $processedCount/${persistedUris.size} images\n\n")
-        } else {
-            fullReport.insert(0, "⚠️ Could not analyze any images\n\n")
-        }
+        header.append("\n")
 
+        // Insert summary at beginning
+        fullReport.insert(0, header.toString())
         val diagnostic = fullReport.toString()
 
         // Save to database
@@ -991,16 +1194,56 @@ class ConversationsActivity : AppCompatActivity() {
         )
 
         withContext(Dispatchers.Main) {
-            addConversationCard(persistedUris, diagnostic, timestamp)
-            val message = if (processedCount > 0) {
-                "Analysis complete! Processed $processedCount images"
+            // NEW: Calculate average week number for arrow positioning
+            val averageWeekForArrow = if (weekNumbers.isNotEmpty()) {
+                weekNumbers.average().toInt().coerceIn(1, 16)
             } else {
-                "Analysis completed with limited results"
+                // If no week numbers, estimate from most common week range
+                val mostCommonRange = weekRangeCounts.maxByOrNull { it.value }?.key
+                when {
+                    mostCommonRange?.contains("Early") == true -> 2  // Mid Early
+                    mostCommonRange?.contains("Middle") == true -> 6  // Mid Middle
+                    mostCommonRange?.contains("Ready") == true -> 10  // Mid Ready
+                    mostCommonRange?.contains("Mature") == true -> 14  // Mid Mature
+                    else -> null
+                }
             }
+
+            // Pass week number to the card for arrow positioning
+            addConversationCard(persistedUris, diagnostic, timestamp, averageWeekForArrow)
+
+            // Scroll to show the new card
+            scrollToBottom()
+
+            val message = when {
+                processedCount > 0 -> {
+                    val weekInfo = if (weekRangeCounts.isNotEmpty()) {
+                        val mostCommon = weekRangeCounts.maxByOrNull { it.value }?.key ?: ""
+                        val weekNumInfo = if (averageWeekForArrow != null) " (Week $averageWeekForArrow)" else ""
+                        " - $mostCommon$weekNumInfo"
+                    } else ""
+                    "✅ Analysis complete! Processed $processedCount images$weekInfo"
+                }
+                plantDetectedInAnyImage && yolo != null -> "⚠️ Plants detected but analysis had issues"
+                else -> "❌ No plants detected in any images"
+            }
+
             Toast.makeText(this@ConversationsActivity, message, Toast.LENGTH_LONG).show()
+            hideLoader()
 
             // Debug: Show what was actually processed
             Log.d("AI_DEBUG", "Final report:\n$diagnostic")
+            Log.d("WeekData", "Week numbers collected: $weekNumbers, Average: $averageWeekForArrow")
+        }
+    }
+
+    private fun getStageFromWeekNumber(week: Int): Int {
+        return when (week) {
+            in 1..3 -> 1   // Early
+            in 4..8 -> 2   // Middle
+            in 9..12 -> 3  // Ready
+            in 13..16 -> 4 // Mature
+            else -> 1      // Default to Early if unexpected
         }
     }
 
@@ -1034,6 +1277,9 @@ class ConversationsActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.e("Fallback", "Fallback save also failed", e)
             withContext(Dispatchers.Main) {
+                // ADD THIS: Scroll to show the new card
+                scrollToBottom()
+
                 Toast.makeText(
                     this@ConversationsActivity,
                     "Failed to save images: ${e.message}",
@@ -1043,14 +1289,9 @@ class ConversationsActivity : AppCompatActivity() {
         }
     }
 
-    // Change requirement: allow processing if at least one model is available
     private fun areModelsAvailable(): Boolean {
-        val cnnReady = cnn != null
-        val yoloReady = yolo != null
-
-        Log.d("ModelCheck", "CNN ready: $cnnReady, YOLO ready: $yoloReady")
-
-        return cnnReady || yoloReady // At least one model should be available
+        // Just check the global ModelManager
+        return ModelManager.areModelsAvailable()
     }
 
     // Helper
@@ -1062,6 +1303,32 @@ class ConversationsActivity : AppCompatActivity() {
                 else it.toString()
             }
     }
+
+    private fun getWeekRangeForMaturity(maturity: String): String {
+        val lowerMaturity = maturity.lowercase(Locale.getDefault())
+        return when {
+            lowerMaturity.contains("premature") || lowerMaturity.contains("early") ->
+                "Early (Weeks 1-3)"
+            lowerMaturity.contains("medium") || lowerMaturity.contains("near") ->
+                "Middle (Weeks 4-8)"
+            lowerMaturity.contains("mature") || lowerMaturity.contains("ready") ->
+                "Ready (Weeks 9-12)"
+            lowerMaturity.contains("late") ->
+                "Mature (Weeks 13-16)"
+            else -> "Early (Weeks 1-3)"
+        }
+    }
+
+    private fun getStageFromWeekRange(weekRange: String): Int {
+        return when {
+            weekRange.contains("Early") -> 1
+            weekRange.contains("Middle") -> 2
+            weekRange.contains("Ready") -> 3
+            weekRange.contains("Mature") -> 4
+            else -> 1
+        }
+    }
+
     private fun showModelErrorDialog(error: String) {
         AlertDialog.Builder(this)
             .setTitle("AI Models Not Available")
@@ -1126,12 +1393,14 @@ class ConversationsActivity : AppCompatActivity() {
                 val result = cnn?.classify(testBitmap)
 
                 if (result != null) {
+                    val weekRange = getWeekRangeForMaturity(result.maturity)
                     val testResult = """
                     ✅ QUICK TEST PASSED
                     
                     Maturity: ${result.maturity}
                     Health: ${result.health}  
                     Variant: ${result.variant}
+                    Week Range: $weekRange
                     Confidence: ${"%.1f".format(result.confidence * 100)}%
                     
                     All predictions received successfully!
@@ -1175,10 +1444,12 @@ class ConversationsActivity : AppCompatActivity() {
                 testResults.append("1. Basic Prediction:\n")
                 val basicResult = cnn?.classify(testBitmap)
                 if (basicResult != null) {
+                    val weekRange = getWeekRangeForMaturity(basicResult.maturity)
                     testResults.append("   ✅ SUCCESS\n")
                     testResults.append("   - Maturity: ${basicResult.maturity}\n")
                     testResults.append("   - Health: ${basicResult.health}\n")
                     testResults.append("   - Variant: ${basicResult.variant}\n")
+                    testResults.append("   - Week Range: $weekRange\n")
                     testResults.append("   - Confidence: ${"%.1f".format(basicResult.confidence * 100)}%\n")
                 } else {
                     testResults.append("   ❌ FAILED\n")
@@ -1200,8 +1471,7 @@ class ConversationsActivity : AppCompatActivity() {
         
         CNN Model: ${if (cnn != null) "✅ LOADED" else "❌ NOT LOADED"}
         YOLO Model: ${if (yolo != null) "✅ LOADED" else "❌ NOT LOADED"}
-        Models Flag: $modelsLoaded
-        Loading in Progress: $modelLoadingInProgress
+        Models Flag: ${ModelManager.areModelsAvailable()}
         
         ${if (cnn != null && yolo != null) "🎉 All models ready!" else "⚠️ Some models missing"}
     """.trimIndent()
@@ -1220,6 +1490,7 @@ class ConversationsActivity : AppCompatActivity() {
 
                 if (testBitmap != null) {
                     val result = cnn?.classify(testBitmap)
+                    val weekRange = result?.let { getWeekRangeForMaturity(it.maturity) } ?: "N/A"
 
                     val testResult = """
                     📸 REAL IMAGE TEST
@@ -1228,6 +1499,7 @@ class ConversationsActivity : AppCompatActivity() {
                     Maturity: ${result?.maturity ?: "N/A"}
                     Health: ${result?.health ?: "N/A"}
                     Variant: ${result?.variant ?: "N/A"}
+                    Week Range: $weekRange
                     Confidence: ${result?.confidence?.let { "%.1f".format(it * 100) } ?: "N/A"}%
                     
                     ${if (result != null) "✅ Analysis completed" else "❌ Analysis failed"}
@@ -1300,21 +1572,34 @@ class ConversationsActivity : AppCompatActivity() {
                 if (yolo != null) {
                     try {
                         val testBitmap = createTestBitmap()
-                        val detection = withContext(Dispatchers.Default) {
-                            yolo?.detect(testBitmap)
+
+                        val detections = withContext(Dispatchers.Default) {
+                            yolo?.detect(testBitmap) ?: emptyList()
                         }
-                        if (detection != null) {
-                            testResults.append("   ✅ YOLO working - detected: ${detection.label} (${"%.1f".format(detection.score * 100)}%)\n")
+
+                        if (detections.isNotEmpty()) {
+                            // Get highest-confidence detection
+                            val best = detections.maxByOrNull { it.score }!!
+
+                            testResults.append(
+                                "   ✅ YOLO working - detected: ${best.label} " +
+                                        "(${ "%.1f".format(best.score * 100) }%)\n"
+                            )
+
                         } else {
                             testResults.append("   ⚠️ YOLO working but no detection\n")
                         }
+
                         testBitmap.recycle()
+
                     } catch (e: Exception) {
                         testResults.append("   ❌ YOLO test failed: ${e.message}\n")
                     }
+
                 } else {
                     testResults.append("   ❌ YOLO not available\n")
                 }
+
 
                 // Test 3: CNN Classification
                 testResults.append("\n3. CNN CLASSIFICATION TEST:\n")
@@ -1325,10 +1610,12 @@ class ConversationsActivity : AppCompatActivity() {
                             cnn?.classify(testBitmap)
                         }
                         if (result != null) {
+                            val weekRange = getWeekRangeForMaturity(result.maturity)
                             testResults.append("   ✅ CNN working\n")
                             testResults.append("   - Maturity: ${result.maturity}\n")
                             testResults.append("   - Health: ${result.health}\n")
                             testResults.append("   - Variant: ${result.variant}\n")
+                            testResults.append("   - Week Range: $weekRange\n")
                             testResults.append("   - Confidence: ${"%.1f".format(result.confidence * 100)}%\n")
                         } else {
                             testResults.append("   ❌ CNN returned null\n")
@@ -1365,6 +1652,15 @@ class ConversationsActivity : AppCompatActivity() {
             }
 
             showTestResult(testResults.toString())
+        }
+    }
+
+    private fun scrollToBottom() {
+        runOnUiThread {
+            // Give the layout a moment to update, then scroll
+            uploadedImagesContainer.postDelayed({
+                scrollContent.fullScroll(View.FOCUS_DOWN)
+            }, 100)
         }
     }
 }

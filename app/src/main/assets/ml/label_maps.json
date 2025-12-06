@@ -1,7 +1,8 @@
 {
   "maturity": {
-    "near-harvest": 0,
-    "premature": 1
+    "premature": 0,
+    "near-harvest": 1,
+    "harvest-ready": 2
   },
   "health": {
     "bad": 0,

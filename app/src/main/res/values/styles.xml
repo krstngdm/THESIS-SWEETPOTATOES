@@ -5,6 +5,7 @@
         <!-- Customize your theme here -->
         <item name="colorPrimary">@drawable/gradient_background</item>
         <item name="buttonStyle">@style/CustomButton</item>
+        <item name="android:fontFamily">@font/poppins_regular</item>
     </style>
     <style name="CustomButton" parent="Widget.AppCompat.Button">
         <item name="backgroundTint">?attr/colorPrimary</item>

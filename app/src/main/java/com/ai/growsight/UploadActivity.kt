@@ -12,6 +12,7 @@ import android.widget.*
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -21,15 +22,16 @@ import com.ai.growsight.ConversationsActivity.Companion.EXTRA_CONVERSATION_ID
 import com.ai.growsight.ConversationsActivity.Companion.EXTRA_IMAGE_URIS
 import com.ai.growsight.ai.MaturityClassifier
 import com.ai.growsight.ai.ModelManager
+import com.ai.growsight.ai.ModelUpdateManager
 import com.ai.growsight.ai.YoloDetector
 import com.ai.growsight.data.AppDatabase
 import com.ai.growsight.data.ConversationEntity
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
-class UploadActivity : AppCompatActivity() {
+class UploadActivity : AppCompatActivity(), ModelUpdateManager.UpdateListener {
 
     private lateinit var uploadButton: Button
     private lateinit var flipper: ViewFlipper
@@ -40,12 +42,20 @@ class UploadActivity : AppCompatActivity() {
     private var conversationId: Long = -1L
 
     private var cameraImageUri: Uri? = null
+    private var updateInProgress = false
 
     // Model instances - loaded once at startup
     var yoloDetector: YoloDetector? = null
     var maturityClassifier: MaturityClassifier? = null
     private var modelsLoaded = false
     private var modelLoadingInProgress = false
+    private var modelErrorDialogShown = false
+
+    private lateinit var updateProgressDialog: AlertDialog
+    private lateinit var progressTextView: TextView
+
+    private lateinit var modelStatusIndicator: ImageView
+    private lateinit var modelStatusText: TextView
 
     // --- Gallery picker ---
     private val pickImagesLauncher =
@@ -68,7 +78,6 @@ class UploadActivity : AppCompatActivity() {
             val intent = Intent(this, ConversationsActivity::class.java).apply {
                 putParcelableArrayListExtra(EXTRA_IMAGE_URIS, ArrayList(unsentUris))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                // Pass model references
                 putExtra("yolo_available", yoloDetector != null)
                 putExtra("cnn_available", maturityClassifier != null)
             }
@@ -85,7 +94,6 @@ class UploadActivity : AppCompatActivity() {
                         arrayListOf(cameraImageUri)
                     )
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    // Pass model references
                     putExtra("yolo_available", yoloDetector != null)
                     putExtra("cnn_available", maturityClassifier != null)
                 }
@@ -99,11 +107,9 @@ class UploadActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main)
 
-        // Add this to catch any initialization errors
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             Log.e("CRASH", "App crashed in thread: ${thread.name}", throwable)
             throwable.printStackTrace()
-            // This will help us see the actual error
         }
 
         uploadButton = findViewById(R.id.uploadButton)
@@ -111,6 +117,22 @@ class UploadActivity : AppCompatActivity() {
         drawerLayout = findViewById(R.id.drawerLayout)
         conversationListView = findViewById(R.id.conversationListView)
         val hamburgerButton = findViewById<ImageButton>(R.id.menuButton)
+
+        modelStatusIndicator = findViewById(R.id.modelStatusIndicator)
+        modelStatusText = findViewById(R.id.modelStatusText)
+
+        runOnUiThread {
+            modelStatusIndicator.setImageResource(R.drawable.ic_model_loading)
+            modelStatusIndicator.setColorFilter(ContextCompat.getColor(this, R.color.blue))
+            modelStatusText.text = "Loading AI..."
+            modelStatusText.setTextColor(ContextCompat.getColor(this, R.color.blue))
+        }
+
+        modelStatusIndicator.setOnClickListener {
+            showModelStatusDialog()
+        }
+
+        initializeAppModelsAsync()
 
         db = Room.databaseBuilder(
             applicationContext,
@@ -122,15 +144,10 @@ class UploadActivity : AppCompatActivity() {
         flipper.flipInterval = 5000
         flipper.startFlipping()
 
-        // Load models at startup
-        loadModels()
-
-        // Upload button shows choice dialog
         uploadButton.setOnClickListener {
             showImageSourceDialog()
         }
 
-        // Hamburger menu toggle
         hamburgerButton.setOnClickListener {
             if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
                 drawerLayout.closeDrawer(GravityCompat.END)
@@ -152,58 +169,186 @@ class UploadActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadModels() {
+    private fun initializeAppModelsAsync() {
         if (modelLoadingInProgress) {
             Log.d("UploadActivity", "Model loading already in progress")
             return
         }
 
         modelLoadingInProgress = true
-        lifecycleScope.launch {
+        modelErrorDialogShown = false
+
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
-                Log.d("UploadActivity", "Starting model loading using ModelManager...")
+                Log.d("UploadActivity", "Starting model initialization...")
 
-                // Use ModelManager to load models
-                yoloDetector = ModelManager.getYoloDetector(this@UploadActivity)
-                maturityClassifier = ModelManager.getMaturityClassifier(this@UploadActivity)
+                updateInProgress = true
+                val updated = ModelUpdateManager.checkForModelUpdates(
+                    this@UploadActivity,
+                    this@UploadActivity
+                )
+                updateInProgress = false
 
-                modelsLoaded = (yoloDetector != null || maturityClassifier != null)
-                modelLoadingInProgress = false
+                Log.d("UploadActivity", "Initializing ModelManager...")
+                ModelManager.initializeModels(this@UploadActivity)
 
-                Log.d("UploadActivity", "ModelManager loading finished. YOLO=${yoloDetector != null}, CNN=${maturityClassifier != null}")
+                updateLocalModelReferences()
 
-                runOnUiThread {
-                    updateUIForModelStatus()
+                modelsLoaded = ModelManager.areModelsAvailable()
+
+                withContext(Dispatchers.Main) {
+                    modelLoadingInProgress = false
+
+                    val yoloAvailable = yoloDetector != null
+                    val cnnAvailable = maturityClassifier != null
+
+                    updateModelStatusIndicator()
+
+                    if (yoloAvailable && cnnAvailable) {
+                        Toast.makeText(
+                            this@UploadActivity,
+                            "✓ All AI models loaded",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    Log.d("UploadActivity", "Model initialization complete - YOLO: $yoloAvailable, CNN: $cnnAvailable")
                 }
             } catch (e: Exception) {
-                Log.e("UploadActivity", "Failed to load models using ModelManager: ${e.message}", e)
+                Log.e("UploadActivity", "Failed to initialize models: ${e.message}", e)
+                updateInProgress = false
                 modelLoadingInProgress = false
-                runOnUiThread {
-                    showModelErrorDialog("Failed to load AI models: ${e.message}")
+
+                withContext(Dispatchers.Main) {
+                    if (ModelManager.areModelsAvailable()) {
+                        updateLocalModelReferences()
+                        updateModelStatusIndicator()
+                        Toast.makeText(
+                            this@UploadActivity,
+                            "Using previously loaded models",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        updateModelStatusIndicator()
+
+                        if (!modelErrorDialogShown && !isFinishing) {
+                            modelErrorDialogShown = true
+                            showModelErrorDialog("""
+                                Failed to load AI models. Some features may be unavailable.
+                                
+                                Error: ${e.message ?: "Unknown error"}
+                                
+                                You can still upload images without AI analysis.
+                            """.trimIndent())
+                        }
+                    }
+                }
+            }
+
+            startModelStatusChecker()
+        }
+    }
+
+    private fun startModelStatusChecker() {
+        lifecycleScope.launch {
+            delay(5000)
+
+            while (true) {
+                delay(30000)
+
+                if (!modelLoadingInProgress) {
+                    updateModelStatusIndicator()
                 }
             }
         }
     }
 
-    private fun updateUIForModelStatus() {
-        val yoloAvailable = yoloDetector != null
-        val cnnAvailable = maturityClassifier != null
+    private fun updateModelStatusIndicator() {
+        val yoloReady = yoloDetector != null
+        val cnnReady = maturityClassifier != null
 
-        Log.d("UploadActivity", "Model Status - YOLO: $yoloAvailable, CNN: $cnnAvailable")
+        runOnUiThread {
+            val allReady = yoloReady && cnnReady
+            val anyReady = yoloReady || cnnReady
 
-        if (!yoloAvailable || !cnnAvailable) {
-            val message = buildString {
-                append("AI Models Status:\n")
-                if (!yoloAvailable) append("• Object detection unavailable\n")
-                if (!cnnAvailable) append("• Plant analysis unavailable\n")
-                append("\nYou can still save images without AI analysis.")
+            when {
+                modelLoadingInProgress -> {
+                    modelStatusIndicator.setImageResource(R.drawable.ic_model_loading)
+                    modelStatusIndicator.setColorFilter(ContextCompat.getColor(this, R.color.blue))
+                    modelStatusText.text = "Loading AI..."
+                    modelStatusText.setTextColor(ContextCompat.getColor(this, R.color.blue))
+                }
+                allReady -> {
+                    modelStatusIndicator.setImageResource(R.drawable.ic_model_ready)
+                    modelStatusIndicator.setColorFilter(ContextCompat.getColor(this, R.color.green))
+                    modelStatusText.text = "AI Ready"
+                    modelStatusText.setTextColor(ContextCompat.getColor(this, R.color.green))
+                }
+                anyReady -> {
+                    modelStatusIndicator.setImageResource(R.drawable.ic_model_partial)
+                    modelStatusIndicator.setColorFilter(ContextCompat.getColor(this, R.color.orange))
+                    modelStatusText.text = "AI Limited"
+                    modelStatusText.setTextColor(ContextCompat.getColor(this, R.color.orange))
+                }
+                else -> {
+                    modelStatusIndicator.setImageResource(R.drawable.ic_model_offline)
+                    modelStatusIndicator.setColorFilter(ContextCompat.getColor(this, R.color.red))
+                    modelStatusText.text = "AI Offline"
+                    modelStatusText.setTextColor(ContextCompat.getColor(this, R.color.red))
+                }
             }
-            // Only show dialog if no models loaded at all
-            if (!yoloAvailable && !cnnAvailable) {
-                showModelErrorDialog(message)
+        }
+    }
+
+    private fun showModelStatusDialog() {
+        val yoloReady = yoloDetector != null
+        val cnnReady = maturityClassifier != null
+        val loading = modelLoadingInProgress
+
+        val message = buildString {
+            append("🤖 AI Model Status\n\n")
+
+            if (loading) {
+                append("🔄 Models are currently loading...\n\n")
             }
-        } else {
-            Toast.makeText(this, "AI models loaded successfully", Toast.LENGTH_SHORT).show()
+
+            append("📊 Current Status:\n")
+            if (yoloReady) {
+                append("✅ YOLO (Object Detection) loaded\n")
+            } else if (loading) {
+                append("⏳ YOLO (Object Detection) loading...\n")
+            } else {
+                append("❌ YOLO (Object Detection) not loaded\n")
+            }
+
+            if (cnnReady) {
+                append("✅ CNN-LSTM (Plant Analysis) loaded\n")
+            } else if (loading) {
+                append("⏳ CNN-LSTM (Plant Analysis) loading...\n")
+            } else {
+                append("❌ CNN-LSTM (Plant Analysis) not loaded\n")
+            }
+
+            append("\nModels load automatically at app startup.")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Model Status")
+            .setMessage(message)
+            .setPositiveButton("Check for Updates") { _, _ ->
+                checkForUpdatesManually()
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun updateLocalModelReferences() {
+        yoloDetector = ModelManager.getYoloDetector()
+        maturityClassifier = ModelManager.getMaturityClassifier()
+
+        runOnUiThread {
+            updateModelStatusIndicator()
+            Log.d("UploadActivity", "Updated model references - YOLO: ${yoloDetector != null}, CNN: ${maturityClassifier != null}")
         }
     }
 
@@ -215,7 +360,107 @@ class UploadActivity : AppCompatActivity() {
             .show()
     }
 
-    // --- Choice Dialog ---
+    override fun onUpdateStarted() {
+        runOnUiThread {
+            showUpdateProgressDialog("Checking for updates...")
+        }
+    }
+
+    override fun onDownloadProgress(fileName: String, progress: Int, totalFiles: Int) {
+        runOnUiThread {
+            updateProgressDialogMessage("Downloading $fileName... ($progress/$totalFiles)")
+        }
+    }
+
+    override fun onUpdateCompleted(success: Boolean, message: String) {
+        runOnUiThread {
+            dismissUpdateProgressDialog()
+
+            if (success) {
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        ModelManager.cleanup()
+                        ModelManager.initializeModels(this@UploadActivity)
+                        updateLocalModelReferences()
+
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@UploadActivity, "Models updated and reloaded", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("UploadActivity", "Failed to reload models after update", e)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@UploadActivity, "Failed to reload models: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } else if (message != "Models are already up to date") {
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+            } else {
+                updateLocalModelReferences()
+            }
+        }
+    }
+
+    private fun showUpdateProgressDialog(message: String) {
+        try {
+            val dialogView = layoutInflater.inflate(R.layout.dialog_update_progress, null)
+            progressTextView = dialogView.findViewById(R.id.progressTextView)
+
+            updateProgressDialog = AlertDialog.Builder(this)
+                .setTitle("Updating AI Models")
+                .setView(dialogView)
+                .setCancelable(false)
+                .create()
+
+            progressTextView.text = message
+            updateProgressDialog.show()
+        } catch (e: Exception) {
+            Log.e("UploadActivity", "Failed to show progress dialog", e)
+            updateProgressDialog = AlertDialog.Builder(this)
+                .setTitle("Updating AI Models")
+                .setMessage(message)
+                .setCancelable(false)
+                .create()
+            updateProgressDialog.show()
+        }
+    }
+
+    private fun updateProgressDialogMessage(message: String) {
+        if (::progressTextView.isInitialized) {
+            progressTextView.text = message
+        } else if (::updateProgressDialog.isInitialized && updateProgressDialog.isShowing) {
+            updateProgressDialog.setMessage(message)
+        }
+    }
+
+    private fun dismissUpdateProgressDialog() {
+        if (::updateProgressDialog.isInitialized && updateProgressDialog.isShowing) {
+            updateProgressDialog.dismiss()
+        }
+    }
+
+    fun checkForUpdatesManually() {
+        if (updateInProgress) {
+            Toast.makeText(this, "Update already in progress", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            updateInProgress = true
+            val updated = ModelUpdateManager.checkForModelUpdates(this@UploadActivity, this@UploadActivity)
+            updateInProgress = false
+
+            if (!updated) {
+                withContext(Dispatchers.Main) {
+                    updateLocalModelReferences()
+                    Toast.makeText(this@UploadActivity, "Models are up to date", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     private fun showImageSourceDialog() {
         val options = arrayOf("Take Photo", "Choose from Gallery")
         AlertDialog.Builder(this)
@@ -266,12 +511,12 @@ class UploadActivity : AppCompatActivity() {
     }
 
     private fun refreshConversationList() {
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val all = db.conversationDao().getAllConversations()
                 val names = all.map { it.name }
 
-                runOnUiThread {
+                withContext(Dispatchers.Main) {
                     adapter.clear()
                     adapter.addAll(names)
                     adapter.notifyDataSetChanged()
@@ -280,14 +525,14 @@ class UploadActivity : AppCompatActivity() {
                         val emptyText = TextView(this@UploadActivity).apply {
                             text = "No Plantation yet"
                             gravity = Gravity.CENTER
-                            setTextColor(resources.getColor(android.R.color.darker_gray))
+                            setTextColor(ContextCompat.getColor(this@UploadActivity, android.R.color.darker_gray))
                         }
                         conversationListView.emptyView = emptyText
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                runOnUiThread {
+                withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@UploadActivity,
                         "Error loading Plantations",
@@ -299,19 +544,18 @@ class UploadActivity : AppCompatActivity() {
     }
 
     private fun openConversation(position: Int) {
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             val all = db.conversationDao().getAllConversations()
             if (position in all.indices) {
                 val conv = all[position]
                 conversationId = conv.id
-                runOnUiThread {
+                withContext(Dispatchers.Main) {
                     drawerLayout.closeDrawer(GravityCompat.END)
                     val intent = Intent(this@UploadActivity, ConversationsActivity::class.java).apply {
                         putExtra(EXTRA_CONVERSATION_ID, conv.id)
                         putExtra("conversation_name", conv.name)
-                        // Pass model availability
-                        putExtra("yolo_available", yoloDetector != null)
-                        putExtra("cnn_available", maturityClassifier != null)
+                        putExtra("yolo_available", ModelManager.getYoloDetector() != null)
+                        putExtra("cnn_available", ModelManager.getMaturityClassifier() != null)
                     }
                     startActivity(intent)
                 }
@@ -320,11 +564,11 @@ class UploadActivity : AppCompatActivity() {
     }
 
     private fun showConversationOptions(position: Int) {
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             val all = db.conversationDao().getAllConversations()
             if (position in all.indices) {
                 val conv = all[position]
-                runOnUiThread {
+                withContext(Dispatchers.Main) {
                     showOptionsDialog(conv)
                 }
             }
@@ -356,10 +600,10 @@ class UploadActivity : AppCompatActivity() {
             .setPositiveButton("Save") { _, _ ->
                 val newName = input.text.toString().trim()
                 if (newName.isNotEmpty()) {
-                    lifecycleScope.launch {
+                    lifecycleScope.launch(Dispatchers.IO) {
                         db.conversationDao().updateConversationName(conv.id, newName)
                         refreshConversationList()
-                        runOnUiThread {
+                        withContext(Dispatchers.Main) {
                             Toast.makeText(this@UploadActivity, "Plantation updated", Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -376,11 +620,11 @@ class UploadActivity : AppCompatActivity() {
             .setTitle("Delete Plantation")
             .setMessage("Are you sure you want to delete '${conv.name}'?")
             .setPositiveButton("Delete") { _, _ ->
-                lifecycleScope.launch {
+                lifecycleScope.launch(Dispatchers.IO) {
                     db.conversationDao().deleteConversation(conv)
                     if (conv.id == conversationId) conversationId = -1L
                     refreshConversationList()
-                    runOnUiThread {
+                    withContext(Dispatchers.Main) {
                         Toast.makeText(this@UploadActivity, "Plantation deleted", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -406,7 +650,7 @@ class UploadActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 100 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            openCamera() // Permission granted, retry opening camera
+            openCamera()
         } else {
             Toast.makeText(this, "Camera permission is required", Toast.LENGTH_SHORT).show()
         }
@@ -414,11 +658,5 @@ class UploadActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Clean up models
-        try {
-            yoloDetector?.close()
-        } catch (e: Exception) {
-            Log.e("UploadActivity", "Error closing YOLO", e)
-        }
     }
 }

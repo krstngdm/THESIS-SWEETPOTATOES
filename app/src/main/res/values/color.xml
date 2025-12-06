@@ -21,4 +21,9 @@
     <color name="divider_gray">#CCCCCC</color>
     <color name="bottom_devider">#92A687</color>
     <color name="gray_light">#E0E0E0</color>
+    <color name="orange">#FFA071</color>
+    <color name="light_blue">#688FE5</color>
+    <color name="red">#E72E29</color>
+    <color name="blue">#305CDE</color>
+
 </resources>

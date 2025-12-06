@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
     <!-- Permissions -->
     <!-- Android 13+ -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
@@ -16,18 +18,17 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- For TensorFlow Lite GPU acceleration (optional) -->
     <uses-feature android:name="android.hardware.opengles.version" android:required="false" />
     <uses-feature android:name="android.hardware.vulkan.version" android:required="false" />
 
-    <!-- 👇 ADD THIS PART BELOW PERMISSIONS AND ABOVE <application> -->
     <queries>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
     </queries>
-    <!-- 👆 END OF ADDED PART -->
 
     <application
         android:allowBackup="true"
@@ -35,7 +36,9 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.GrowSight">
+        android:theme="@style/Theme.GrowSight"
+        tools:targetApi="33"
+        tools:ignore="MissingClass">
 
         <activity
             android:name=".FullscreenImageActivity"
