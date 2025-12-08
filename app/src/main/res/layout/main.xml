@@ -19,11 +19,11 @@
             <!-- Model Status Indicator -->
 
             <!-- Top content -->
+
             <LinearLayout
                 android:id="@+id/modelStatusContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
                 android:background="@drawable/rounded_corner_gray"
                 android:gravity="center"
                 android:orientation="horizontal"

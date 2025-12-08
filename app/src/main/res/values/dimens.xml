@@ -1,0 +1,4 @@
+<resources>
+    <dimen name="preview_size">80dp</dimen>
+    <dimen name="preview_margin">4dp</dimen>
+</resources>
