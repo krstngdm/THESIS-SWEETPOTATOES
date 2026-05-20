@@ -38,28 +38,72 @@
                 android:id="@+id/conversationTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Testing texting"
-                android:textSize="15sp"
+                android:text="Title"
+                android:textSize="20sp"
                 android:textColor="@color/white"
                 android:gravity="center"
-                android:fontFamily="@font/poppins_bold"
+                android:fontFamily="@font/nunito_bold"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
+        <!-- Weather/Location status banner -->
+        <LinearLayout
+            android:id="@+id/weatherBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/topBanner"
+            android:background="#FFF3CD"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:translationZ="2dp"
+            android:visibility="gone">
+
+
+            <ImageView
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_gravity="center"
+                android:contentDescription="Location icon"
+                android:src="@drawable/pin" />
+
+            <TextView
+                android:id="@+id/weatherBannerText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Location is off — weather-based recommendations unavailable"
+                android:textSize="12sp"
+                android:textColor="#856404" />
+
+            <TextView
+                android:id="@+id/weatherBannerAction"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Turn On"
+                android:textSize="12sp"
+                android:textColor="#0d6efd"
+                android:textStyle="bold"
+                android:paddingStart="8dp"
+                android:paddingEnd="4dp" />
+        </LinearLayout>
 
         <!-- Logo -->
         <ImageButton
             android:id="@+id/logoButton"
             android:layout_width="165dp"
             android:layout_height="48dp"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="13dp"
             android:layout_marginStart="10dp"
             android:layout_marginEnd="12dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/growsight"
+            android:src="@drawable/grow"
             android:scaleType="fitCenter"
             android:adjustViewBounds="true"
             />
@@ -72,7 +116,7 @@
             android:src="@drawable/ic_menu"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:layout_marginTop="5dp"
-            android:layout_marginEnd="24dp"
+            android:layout_marginEnd="12dp"
             android:layout_alignParentEnd="true"
             android:contentDescription="Menu" />
         <!-- Scrollable conversation area -->
@@ -81,7 +125,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_above="@id/bottomBar"
-            android:layout_marginTop="115dp"
+            android:layout_marginTop="163dp"
             android:fillViewport="true">
 
             <LinearLayout
@@ -98,40 +142,212 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="200dp"
                     android:layout_marginBottom="40dp"
-                    android:fontFamily="@font/poppins_bold"
+                    android:fontFamily="@font/nunito_extrabold"
+                    android:textStyle="bold"
                     android:gravity="center"
                     android:padding="16dp"
-                    android:text="Upload the Images of your own sweet potato crop"
+                    android:text="@string/upload_title_ac"
                     android:textColor="@color/black"
-                    android:textSize="25sp" />
+                    android:textSize="30sp" />
 
-                <LinearLayout
-                    android:id="@+id/uploadedImagesContainer"
+                    <LinearLayout
+                        android:id="@+id/uploadedImagesContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:dividerPadding="8dp"
+                        android:showDividers="none" />
+
+                    <!-- Messages container for conversation history -->
+                    <LinearLayout
+                        android:id="@+id/messagesContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="8dp"
+                        android:padding="8dp" />
+
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:dividerPadding="8dp"
-                    android:showDividers="none" />
-
-                <!-- Messages container for conversation history -->
-                <LinearLayout
-                    android:id="@+id/messagesContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
                     android:layout_marginTop="8dp"
-                    android:padding="8dp" />
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="4dp">
+
+                    <com.facebook.shimmer.ShimmerFrameLayout
+                        android:id="@+id/shimmerLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="16dp"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <!-- Thumbnail placeholder -->
+
+                            <!-- Title placeholder -->
+                            <View
+                                android:layout_width="125dp"
+                                android:layout_height="125dp"
+                                android:layout_marginBottom="5dp"
+                                android:background="@drawable/shimmer_placeholder_rounded_8dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+                                <View
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginTop="8dp"
+                                    android:layout_marginEnd="12dp"
+                                    android:background="@drawable/shimmer_placeholder_rounded" />
+
+                                <View
+                                    android:layout_width="110dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginTop="8dp"
+                                    android:background="@color/shimmer_placeholder" />
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="0dp"
+                                    android:layout_weight="1" />
+
+                                <View
+                                    android:layout_width="110dp"
+                                    android:layout_height="21dp"
+                                    android:layout_marginTop="3dp"
+                                    android:background="@drawable/shimmer_placeholder_rounded_8dp" />
+                            </LinearLayout>
+
+                            <!-- ── Divider ── -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="2dp"
+                                android:layout_marginTop="10dp"
+                                android:layout_marginBottom="8dp"
+                                android:background="@color/light_green" />
+
+                            <!-- Subtitle -->
+                            <View
+                                android:layout_width="150dp"
+                                android:layout_height="10dp"
+                                android:layout_marginTop="0dp"
+                                android:background="@color/shimmer_placeholder" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+                                <View
+                                    android:layout_width="16dp"
+                                    android:layout_height="10dp"
+                                    android:layout_marginTop="8dp"
+                                    android:layout_marginEnd="12dp"
+                                    android:background="@color/shimmer_placeholder" />
+
+                                <View
+                                    android:layout_width="120dp"
+                                    android:layout_height="10dp"
+                                    android:layout_marginTop="8dp"
+                                    android:background="@color/shimmer_placeholder" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="35dp"
+                                android:layout_marginTop="16dp"
+                                android:background="@drawable/shimmer_placeholder_rounded_6dp" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="10dp"
+                                android:layout_marginTop="12dp"
+                                android:background="@color/shimmer_placeholder" />
+
+                            <View
+                                android:layout_width="310dp"
+                                android:layout_height="10dp"
+                                android:layout_marginTop="6dp"
+                                android:background="@color/shimmer_placeholder" />
+
+                            <View
+                                android:layout_width="325dp"
+                                android:layout_height="10dp"
+                                android:layout_marginTop="6dp"
+                                android:background="@color/shimmer_placeholder" />
+
+                            <View
+                                android:layout_width="180dp"
+                                android:layout_height="10dp"
+                                android:layout_marginTop="6dp"
+                                android:background="@color/shimmer_placeholder" />
+
+
+                            <!-- ── Divider ── -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="2dp"
+                                android:layout_marginTop="16dp"
+                                android:layout_marginBottom="8dp"
+                                android:background="@color/light_green" />
+
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+                                <View
+                                    android:layout_width="35dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginTop="0dp"
+                                    android:layout_marginEnd="12dp"
+                                    android:background="@drawable/shimmer_placeholder_rounded" />
+                                <View
+                                    android:layout_width="35dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginTop="0dp"
+                                    android:layout_marginEnd="12dp"
+                                    android:background="@drawable/shimmer_placeholder_rounded" />
+                                <View
+                                    android:layout_width="35dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginTop="0dp"
+                                    android:layout_marginEnd="12dp"
+                                    android:background="@drawable/shimmer_placeholder_rounded" />
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="0dp"
+                                    android:layout_weight="1" />
+                                <View
+                                    android:layout_width="50dp"
+                                    android:layout_height="10dp"
+                                    android:layout_marginTop="4dp"
+                                    android:background="@color/shimmer_placeholder" />
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </com.facebook.shimmer.ShimmerFrameLayout>
+                </androidx.cardview.widget.CardView>
 
 
                 <com.github.ybq.android.spinkit.SpinKitView
-                    android:id="@+id/wave_loader"
-                    style="@style/SpinKitView.Wave"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:layout_gravity="center"
-                    app:SpinKit_Color="@color/gd_1"
-                    tools:ignore="MissingClass" />
-            </LinearLayout>
+                        android:id="@+id/wave_loader"
+                        style="@style/SpinKitView.Wave"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:layout_gravity="center"
+                        app:SpinKit_Color="@color/gd_1"
+                        android:visibility="gone"
+                        tools:ignore="MissingClass" />
+                </LinearLayout>
         </ScrollView>
 
         <!-- Fixed bottom bar -->
@@ -146,10 +362,12 @@
 
             <!-- Preview of selected images -->
             <HorizontalScrollView
+                android:id="@+id/previewScrollView"
                 android:layout_width="match_parent"
                 android:layout_height="90dp"
                 android:padding="8dp"
-                android:overScrollMode="never">
+                android:overScrollMode="never"
+                android:visibility="gone">
 
                 <LinearLayout
                     android:id="@+id/previewContainer"
@@ -158,43 +376,49 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical" />
             </HorizontalScrollView>
-
             <!-- Action buttons row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:minHeight="60dp"
                 android:layout_margin="10dp"
-                android:background="@drawable/rounded_top_background"
+                android:layout_marginBottom="0dp"
+                android:background="@drawable/test"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="10dp">
+                android:paddingHorizontal="10dp"
+                android:paddingBottom="0dp"
+                android:clipToOutline="true" >
 
                 <!-- Camera -->
                 <ImageButton
                     android:id="@+id/cameraButton"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:layout_marginStart="5dp"
-                    android:layout_marginEnd="12dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_marginEnd="5dp"
+                    android:background="@drawable/gradient_background"
                     android:contentDescription="Take a picture"
-                    android:src="@drawable/camera" />
+                    android:src="@drawable/camera"
+                    android:elevation="2dp"/>
 
                 <!-- Upload -->
                 <ImageButton
                     android:id="@+id/uploadButton"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_marginEnd="12dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="0dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/gradient_background"
                     android:contentDescription="Upload from gallery"
-                    android:src="@drawable/upload" />
+                    android:src="@drawable/upload"
+                    android:elevation="2dp"/>
 
                 <!-- Delete -->
                 <ImageButton
                     android:id="@+id/deleteButton"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:layout_marginEnd="12dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Delete selected"
@@ -202,22 +426,53 @@
                     android:visibility="gone" />
 
                 <!-- Note -->
+
+                <!-- Send -->
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Note: You can Upload up to 5 Images at once"
+                    android:fontFamily="@font/nunito_extrabold"
+                    android:text="Capture or select image(s)"
                     android:textColor="@color/white"
-                    android:textSize="10sp" />
+                    android:textSize="13sp" />
 
-                <!-- Send -->
-                <ImageButton
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/sendButton"
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:src="@drawable/ic_send"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minHeight="20dp"
+                    android:background="@drawable/gradient_background"
                     android:contentDescription="Send"
-                    android:background="@drawable/gradient_background"/>
+                    android:elevation="3dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="15dp"
+                    android:text="Send"
+                    android:textColor="@color/white"
+                    android:textSize="15sp"
+                    app:backgroundTint="@null"
+                    app:icon="@drawable/ic_send"
+                    app:iconGravity="start"
+                    app:iconTint="@color/white" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="10dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:padding="10dp"
+                android:layout_marginBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/nunito_semibold"
+                    android:text="Note: You can Upload up to 5 Images at once"
+                    android:textAlignment="center"
+                    android:textColor="@color/black"
+                    android:textSize="14sp" />
             </LinearLayout>
         </LinearLayout>
     </RelativeLayout>

@@ -6,7 +6,7 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [PromptEntity::class, ConversationEntity::class],
-    version = 2, // bump version since schema changed
+    version = 6, // bump version since schema changed
     exportSchema = false
 )
 @TypeConverters(Converters::class)

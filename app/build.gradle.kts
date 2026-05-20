@@ -47,9 +47,17 @@ android {
 dependencies {
 
     implementation (libs.android.spinkit)
+    implementation ("com.facebook.shimmer:shimmer:0.5.0")
 
     // ==========================================================
-    // 🔶 TensorFlow Lite
+    // HTTP calls for weather API
+    // ==========================================================
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
+    // ==========================================================
+    // TensorFlow Lite
     // ==========================================================
 
     implementation ("org.tensorflow:tensorflow-lite:2.17.0")
@@ -57,20 +65,13 @@ dependencies {
     implementation ("org.tensorflow:tensorflow-lite-gpu:2.17.0")
 
     // ==========================================================
-    // 🔶 Pytorch
-    // ==========================================================
-
-    implementation ("org.pytorch:pytorch_android:1.13.1")
-    implementation ("org.pytorch:pytorch_android_torchvision:1.13.1")
-
-    // ==========================================================
-    // 🔷 AndroidX Core + Lifecycle
+    // AndroidX Core + Lifecycle
     // ==========================================================
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     // ==========================================================
-    // 🟣 Jetpack Compose
+    // Jetpack Compose
     // ==========================================================
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -80,7 +81,7 @@ dependencies {
     implementation(libs.androidx.material3)
 
     // ==========================================================
-    // 🧰 AppCompat, UI, Material, Drawer, RecyclerView
+    // AppCompat, UI, Material, Drawer, RecyclerView
     // ==========================================================
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.12.0")
@@ -89,7 +90,15 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
 
     // ==========================================================
-    // 📦 Room Local Database
+    // CameraX
+    // ==========================================================
+    implementation("androidx.camera:camera-core:1.3.0")
+    implementation("androidx.camera:camera-camera2:1.3.0")
+    implementation("androidx.camera:camera-lifecycle:1.3.0")
+    implementation("androidx.camera:camera-view:1.3.0")
+
+    // ==========================================================
+    // Room Local Database
     // ==========================================================
     implementation("androidx.room:room-runtime:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
@@ -105,7 +114,7 @@ dependencies {
     implementation(libs.androidx.cardview)
 
     // ==========================================================
-    // 🧪 Testing
+    // Testing
     // ==========================================================
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -114,7 +123,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
 
     // ==========================================================
-    // 🛠 Debugging Tools
+    // Debugging Tools
     // ==========================================================
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

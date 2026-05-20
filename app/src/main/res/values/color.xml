@@ -11,6 +11,7 @@
     <color name="gd_2">#89A050</color>
     <color name="bg_light_green">#F4F6DD</color>
     <color name="greenGray">#A8B28E</color>
+    <color name="driedLeaf">#A48970</color>
 
     <color name="stage1">#E72E29</color>
     <color name="stage2">#FF7701</color>
@@ -25,5 +26,9 @@
     <color name="light_blue">#688FE5</color>
     <color name="red">#E72E29</color>
     <color name="blue">#305CDE</color>
+    <color name="light_green">#B789A050</color>
+
+
+    <color name="shimmer_placeholder">#B789A050</color>
 
 </resources>

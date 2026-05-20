@@ -23,7 +23,19 @@ interface ConversationDao {
     @Query("UPDATE conversations SET name = :newName WHERE id = :id")
     suspend fun updateConversationName(id: Long, newName: String)
 
+    @Query("UPDATE conversations SET cropAgeWeeks = :weeks WHERE id = :id")
+    suspend fun updateCropAge(id: Long, weeks: Int)
+
+    @Query("SELECT cropAgeWeeks FROM conversations WHERE id = :id")
+    suspend fun getCropAge(id: Long): Int?
+
     @Delete
     suspend fun deleteConversation(conversation: ConversationEntity)
+
+    @Query("UPDATE conversations SET plantingDate = :date WHERE id = :id")
+    suspend fun updatePlantingDate(id: Long, date: Long)
+
+    @Query("SELECT plantingDate FROM conversations WHERE id = :id")
+    suspend fun getPlantingDate(id: Long): Long?
 
 }

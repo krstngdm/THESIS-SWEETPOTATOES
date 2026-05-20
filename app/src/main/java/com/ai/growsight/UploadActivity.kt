@@ -20,12 +20,15 @@ import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.ai.growsight.ConversationsActivity.Companion.EXTRA_CONVERSATION_ID
 import com.ai.growsight.ConversationsActivity.Companion.EXTRA_IMAGE_URIS
+import com.ai.growsight.ai.LocationWeatherManager
 import com.ai.growsight.ai.MaturityClassifier
 import com.ai.growsight.ai.ModelManager
 import com.ai.growsight.ai.ModelUpdateManager
+import com.ai.growsight.ai.WeatherData
 import com.ai.growsight.ai.YoloDetector
 import com.ai.growsight.data.AppDatabase
 import com.ai.growsight.data.ConversationEntity
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.*
 import java.io.File
 import java.text.SimpleDateFormat
@@ -56,6 +59,9 @@ class UploadActivity : AppCompatActivity(), ModelUpdateManager.UpdateListener {
 
     private lateinit var modelStatusIndicator: ImageView
     private lateinit var modelStatusText: TextView
+
+    private var pendingWeather: WeatherData? = null
+
 
     // --- Gallery picker ---
     private val pickImagesLauncher =
@@ -100,6 +106,33 @@ class UploadActivity : AppCompatActivity(), ModelUpdateManager.UpdateListener {
                 startActivity(intent)
             } else {
                 Toast.makeText(this, "Camera capture cancelled", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    private val detectionCameraLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val uriString = result.data?.getStringExtra(CameraDetectionActivity.RESULT_IMAGE_URI)
+                val confidence = result.data?.getFloatExtra("detection_confidence", 0f) ?: 0f
+                val wasDetected = result.data?.getBooleanExtra("was_detected", false) ?: false
+
+                if (uriString != null) {
+                    val uri = Uri.parse(uriString)
+                    val intent = Intent(this, ConversationsActivity::class.java).apply {
+                        putParcelableArrayListExtra(EXTRA_IMAGE_URIS, arrayListOf(uri))
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        putExtra("yolo_available", yoloDetector != null)
+                        putExtra("cnn_available", maturityClassifier != null)
+                        putExtra("camera_detection_confidence", confidence)
+                        putExtra("camera_was_detected", wasDetected)
+                        putExtra("preloaded_weather_temp", pendingWeather?.temperatureCelsius ?: -999f)
+                        putExtra("preloaded_weather_humidity", pendingWeather?.humidity ?: -1)
+                        putExtra("preloaded_weather_precip", pendingWeather?.precipitationMm ?: -1f)
+                        putExtra("preloaded_weather_code", pendingWeather?.weatherCode ?: -1)
+                    }
+                    pendingWeather = null
+                    startActivity(intent)
+                }
             }
         }
 
@@ -169,6 +202,19 @@ class UploadActivity : AppCompatActivity(), ModelUpdateManager.UpdateListener {
         }
     }
 
+    private fun shouldAutoCheckForUpdates(): Boolean {
+        val prefs = getSharedPreferences("model_auto_update_prefs", MODE_PRIVATE)
+        val lastCheck = prefs.getLong("last_auto_check_timestamp", 0L)
+        if (lastCheck == 0L) return true
+        val days = java.util.concurrent.TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis() - lastCheck)
+        return days >= 7
+    }
+
+    private fun recordAutoCheckTimestamp() {
+        getSharedPreferences("model_auto_update_prefs", MODE_PRIVATE)
+            .edit().putLong("last_auto_check_timestamp", System.currentTimeMillis()).commit()
+    }
+
     private fun initializeAppModelsAsync() {
         if (modelLoadingInProgress) {
             Log.d("UploadActivity", "Model loading already in progress")
@@ -182,12 +228,15 @@ class UploadActivity : AppCompatActivity(), ModelUpdateManager.UpdateListener {
             try {
                 Log.d("UploadActivity", "Starting model initialization...")
 
-                updateInProgress = true
-                val updated = ModelUpdateManager.checkForModelUpdates(
-                    this@UploadActivity,
-                    this@UploadActivity
-                )
-                updateInProgress = false
+                if (shouldAutoCheckForUpdates()) {
+                    recordAutoCheckTimestamp()
+                    updateInProgress = true
+                    val updated = ModelUpdateManager.checkForModelUpdates(
+                        this@UploadActivity,
+                        this@UploadActivity
+                    )
+                    updateInProgress = false
+                }
 
                 Log.d("UploadActivity", "Initializing ModelManager...")
                 ModelManager.initializeModels(this@UploadActivity)
@@ -447,6 +496,8 @@ class UploadActivity : AppCompatActivity(), ModelUpdateManager.UpdateListener {
             return
         }
 
+        recordAutoCheckTimestamp()
+
         lifecycleScope.launch(Dispatchers.IO) {
             updateInProgress = true
             val updated = ModelUpdateManager.checkForModelUpdates(this@UploadActivity, this@UploadActivity)
@@ -463,7 +514,7 @@ class UploadActivity : AppCompatActivity(), ModelUpdateManager.UpdateListener {
 
     private fun showImageSourceDialog() {
         val options = arrayOf("Take Photo", "Choose from Gallery")
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this, R.style.MyCustomDialogLayout)
             .setTitle("Select Image Source")
             .setItems(options) { _, which ->
                 when (which) {
@@ -484,13 +535,23 @@ class UploadActivity : AppCompatActivity(), ModelUpdateManager.UpdateListener {
             return
         }
 
-        val imageFile = createImageFile()
-        cameraImageUri = FileProvider.getUriForFile(
-            this,
-            "${applicationContext.packageName}.provider",
-            imageFile
+        // Show location flow BEFORE opening camera
+        LocationWeatherManager.startWeatherFlow(
+            activity = this,
+            callback = object : LocationWeatherManager.WeatherFlowCallback {
+                override fun onWeatherReady(weather: WeatherData?) {
+                    // Store weather to pass through to ConversationsActivity
+                    pendingWeather = weather
+                    val intent = Intent(this@UploadActivity, CameraDetectionActivity::class.java)
+                    detectionCameraLauncher.launch(intent)
+                }
+                override fun onSkipped() {
+                    pendingWeather = null
+                    val intent = Intent(this@UploadActivity, CameraDetectionActivity::class.java)
+                    detectionCameraLauncher.launch(intent)
+                }
+            }
         )
-        takePictureLauncher.launch(cameraImageUri)
     }
 
     private fun createImageFile(): File {

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Represents a bullet list — used on "Summary" tab -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Bullet 1 -->
+    <path
+        android:fillColor="@android:color/black"
+        android:pathData="M4,5 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <!-- Line 1 -->
+    <path
+        android:fillColor="@android:color/black"
+        android:pathData="M8,4 H21 V6 H8 Z" />
+
+    <!-- Bullet 2 -->
+    <path
+        android:fillColor="@android:color/black"
+        android:pathData="M4,11 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <!-- Line 2 -->
+    <path
+        android:fillColor="@android:color/black"
+        android:pathData="M8,10 H21 V12 H8 Z" />
+
+    <!-- Bullet 3 -->
+    <path
+        android:fillColor="@android:color/black"
+        android:pathData="M4,17 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <!-- Line 3 -->
+    <path
+        android:fillColor="@android:color/black"
+        android:pathData="M8,16 H21 V18 H8 Z" />
+
+</vector>

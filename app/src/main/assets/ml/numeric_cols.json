@@ -1,1 +1,8 @@
-["width", "height", "aspect_ratio", "area", "perimeter", "num_points"]
+[
+  "num_points",
+  "width",
+  "height",
+  "aspect_ratio",
+  "area",
+  "perimeter"
+]

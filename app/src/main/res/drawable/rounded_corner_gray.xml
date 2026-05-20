@@ -6,11 +6,6 @@
     <!-- Rounded corners -->
     <corners android:radius="5dp" /> <!-- Adjust radius as needed -->
 
-    <!-- Optional: Add a subtle border -->
-    <stroke
-        android:width="1dp"
-        android:color="#473C38" /> <!-- Slightly darker gray border -->
-
     <!-- Optional: Add padding -->
     <padding
         android:left="4dp"

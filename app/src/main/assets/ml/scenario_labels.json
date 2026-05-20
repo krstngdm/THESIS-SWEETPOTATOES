@@ -1,0 +1,14 @@
+{
+  "0": "on_track_early",
+  "1": "slightly_late",
+  "2": "behind_schedule",
+  "3": "critically_behind",
+  "4": "approaching_harvest",
+  "5": "approaching_heat_stress",
+  "6": "approaching_rain_risk",
+  "7": "overdue_near_harvest",
+  "8": "harvest_on_time",
+  "9": "harvest_early",
+  "10": "harvest_overdue",
+  "11": "no_detection"
+}

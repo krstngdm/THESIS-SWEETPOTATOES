@@ -1,0 +1,3 @@
+harvest_ready
+near_harvest
+not_ready

@@ -5,9 +5,13 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "prompts")
 data class PromptEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
     val conversationId: Long,
     val imageUris: List<String>,
     val diagnostic: String,
-    val timestamp: String
+    val timestamp: String,
+    val weekNumber: Int? = null,
+    val cropAgeWeeks: Int? = null,
+    val uriHash: String? = null
 )

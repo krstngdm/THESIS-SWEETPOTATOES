@@ -1,70 +1,312 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="@drawable/card_background"
-    android:padding="12dp"
-    android:layout_marginBottom="12dp">
+    android:layout_marginStart="10dp"
+    android:layout_marginEnd="10dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="21dp"
+    app:cardElevation="4dp">
 
-    <!-- Image Row -->
-    <HorizontalScrollView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:scrollbars="none">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <LinearLayout
-            android:id="@+id/cardImageRow"
+        <!-- ── Main image row ── -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:overScrollMode="never">
+
+            <LinearLayout
+                android:id="@+id/cardImageRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <!-- ── Scenario badge ── -->
+        <TextView
+            android:id="@+id/scenarioBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal" />
-    </HorizontalScrollView>
+            android:layout_marginTop="12dp"
+            android:background="@drawable/rounded_corner_green_light"
+            android:paddingStart="10dp"
+            android:paddingTop="3dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="3dp"
+            android:text="—"
+            android:textColor="#473C38"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
 
-    <!-- Stage Gradient Line with Arrow -->
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="24dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp">
-
-        <!-- Gradient Line -->
-        <View
-            android:id="@+id/cardStageGradient"
+        <!-- ── Stage badge row ── -->
+        <LinearLayout
+            android:id="@+id/stageBadgeRow"
             android:layout_width="match_parent"
-            android:layout_height="10dp"
-            android:layout_gravity="center_vertical"
-            android:background="@drawable/stage_gradient"/>
+            android:layout_height="35dp"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <!-- Arrow Indicator -->
-        <ImageView
-            android:id="@+id/stageArrow"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_gravity="start|top"
-            android:src="@drawable/ic_arrow_up"
-            android:translationX="0dp"
-            android:translationY="15dp"/>
-    </FrameLayout>
+            <View
+                android:id="@+id/stageColorDot"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="2dp"
+                android:background="@drawable/circle_gray" />
 
+            <TextView
+                android:id="@+id/stageLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="2dp"
+                android:layout_weight="1"
+                android:text="—"
+                android:textColor="@color/black"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
+            <TextView
+                android:id="@+id/confidenceChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rounded_corner_gray"
+                android:elevation="4dp"
+                android:outlineProvider="background"
+                android:paddingStart="10dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="4dp"
+                android:stateListAnimator="@null"
+                android:text="0%"
+                android:textColor="@color/white"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:translationZ="1dp" />
 
-    <!-- Diagnostic Report -->
-    <TextView
-        android:id="@+id/cardDiagnostic"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Diagnostic Report"
-        android:textSize="14sp"
-        android:textColor="@color/black"
-        android:layout_marginBottom="4dp"/>
+        </LinearLayout>
 
-    <!-- Timestamp -->
-    <TextView
-        android:id="@+id/cardTimestamp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="MM/DD/YYYY at hh:mm"
-        android:textSize="12sp"
-        android:textColor="@color/gray"
-        android:gravity="center"/>
-</LinearLayout>
+        <!-- ── Low confidence warning ── -->
+        <TextView
+            android:id="@+id/lowConfidenceWarning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="⚠️ Low confidence — please upload a clearer image for more reliable results."
+            android:textColor="#E65100"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <!-- ── Divider ── -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="12dp"
+            android:background="@color/divider_gray" />
+
+        <!-- ── Estimated harvest time ── -->
+        <TextView
+            android:id="@+id/harvestTimeTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/nunito_bold"
+            android:text="🗓️ Estimated Harvest Time"
+            android:textAllCaps="true"
+            android:textColor="@color/gray"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/harvestTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="@font/nunito_semibold"
+            android:text="→ —"
+            android:textSize="15sp" />
+
+        <!-- ── Toggle bar ──────────────────────────────────────────────────
+             Summary (LEFT, default) = narrative paragraph from ScenarioClassifier
+             Full detail (RIGHT)     = bullet recommendations + sections
+        ─────────────────────────────────────────────────────────────────── -->
+        <LinearLayout
+            android:id="@+id/viewModeToggleBar"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/rounded_corner_gray_light_tabs"
+            android:orientation="horizontal"
+            android:padding="5dp">
+
+            <LinearLayout
+                android:id="@+id/toggleSummary"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/toggle_active_bg"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="12dp"
+                    android:layout_height="15dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginEnd="8dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_toggle_paragraph" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:text="Summary"
+                    android:textColor="@color/black"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/toggleFullDetail"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/toggle_active_bg"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="12dp"
+                    android:layout_height="15dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginEnd="8dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_toggle_list" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:background="@android:color/transparent"
+                    android:text="Full detail"
+                    android:textColor="@color/gray"
+                    android:textSize="13sp"
+                    android:textStyle="normal" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- ── Summary content: narrative paragraph (default VISIBLE) ── -->
+        <TextView
+            android:id="@+id/interpretationSummaryText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lineSpacingMultiplier="1.55"
+            android:text="—"
+            android:textColor="@color/black"
+            android:textSize="13sp"
+            android:visibility="visible" />
+
+        <!-- ── Full detail content: bullet recommendations (default GONE) ── -->
+        <LinearLayout
+            android:id="@+id/recommendationContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone" />
+
+        <!-- ── Footer divider ── -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/divider_gray" />
+
+        <!-- ── Footer: weather chips left, timestamp right ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/weatherStrip"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/weatherTemp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/rounded_corner_gray_light"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:text="🌡️ —"
+                    android:textColor="@color/gray"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/weatherHumidity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/rounded_corner_gray_light"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:text="💧 —"
+                    android:textColor="@color/gray"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/weatherPrecip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/rounded_corner_gray_light"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:text="🌧️ —"
+                    android:textColor="@color/gray"
+                    android:textSize="11sp" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/cardTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="—"
+                android:textColor="@color/gray"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

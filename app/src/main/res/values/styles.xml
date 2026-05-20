@@ -5,7 +5,7 @@
         <!-- Customize your theme here -->
         <item name="colorPrimary">@drawable/gradient_background</item>
         <item name="buttonStyle">@style/CustomButton</item>
-        <item name="android:fontFamily">@font/poppins_regular</item>
+        <item name="backgroundTint">@color/white</item>
     </style>
     <style name="CustomButton" parent="Widget.AppCompat.Button">
         <item name="backgroundTint">?attr/colorPrimary</item>
@@ -17,6 +17,7 @@
         <item name="android:textColor">@android:color/white</item>
         <item name="android:textSize">12sp</item>
         <item name="android:layout_marginEnd">6dp</item>
+        <item name="android:layout_marginStart">6dp</item>
         <item name="android:gravity">center</item>
     </style>
 </resources>

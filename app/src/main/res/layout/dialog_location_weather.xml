@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Location OFF state -->
+
+    <!-- Finding location state -->
+    <LinearLayout
+        android:id="@+id/locationOffSection"
+        android:layout_width="match_parent"
+        android:layout_height="280dp"
+        android:layout_marginTop="30dp"
+        android:background="@drawable/rounded_white_bg"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="10dp"
+
+        android:visibility="visible">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:layout_marginLeft="3dp"
+            android:layout_marginBottom="12dp"
+            android:contentDescription="Location icon"
+            android:src="@drawable/pin" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginBottom="8dp"
+            android:gravity="center"
+            android:text="Enable Location for Better Recommendations"
+            android:textColor="#1a1a1a"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginBottom="20dp"
+            android:gravity="center"
+            android:text="GrowSight uses your location to check current weather conditions and provide accurate harvest recommendations based on temperature, humidity, and rainfall."
+            android:textColor="#555555"
+            android:textSize="13sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOpenSettings"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+
+            android:background="@drawable/gradient_background"
+            android:text="Turn On Location"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+
+            android:layout_marginBottom="5dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"
+
+            android:elevation="4dp"
+            android:translationZ="4dp"
+
+            app:backgroundTint="@null"
+            app:iconTint="@color/black" />
+
+        <Button
+            android:id="@+id/btnSkipLocation"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="4dp"
+            android:background="@android:color/transparent"
+            android:text="Continue Without Weather"
+            android:textAllCaps="false"
+            android:textColor="#555555" />
+
+    </LinearLayout>
+
+    <!-- No internet state -->
+    <LinearLayout
+        android:id="@+id/findingLocationSection"
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:background="@drawable/rounded_white_bg"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="10dp"
+        android:visibility="gone">
+
+        <com.github.ybq.android.spinkit.SpinKitView
+            android:id="@+id/locationSpinner"
+            style="@style/SpinKitView.Wave"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_gravity="center"
+            android:layout_marginBottom="16dp"
+            app:SpinKit_Color="@color/green" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginBottom="6dp"
+            android:text="Finding your location..."
+            android:textColor="#1a1a1a"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/locationStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginBottom="16dp"
+            android:gravity="center"
+            android:text="This may take a few seconds"
+            android:textColor="#555555"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnCancelLocation"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@android:color/transparent"
+            android:text="Skip — Continue Without Weather"
+            android:textAllCaps="false"
+            android:textColor="#555555" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/noInternetSection"
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:background="@drawable/rounded_white_bg"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="10dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:layout_marginLeft="3dp"
+            android:layout_marginBottom="12dp"
+            android:contentDescription="Location icon"
+            android:src="@drawable/no_internet" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginBottom="8dp"
+            android:gravity="center"
+            android:text="No Internet Connection"
+            android:textColor="#1a1a1a"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginBottom="20dp"
+            android:gravity="center"
+            android:text="Weather-based recommendations are unavailable without internet. The app will still classify your crop's maturity stage and provide general recommendations."
+            android:textColor="#555555"
+            android:textSize="13sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnContinueNoInternet"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/gradient_background"
+            android:text="Continue Anyway"
+            android:textAllCaps="false"
+
+            android:layout_marginBottom="5dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"
+
+            android:elevation="4dp"
+            android:translationZ="4dp"
+
+            android:textColor="@color/white"
+            app:backgroundTint="@null" />
+
+    </LinearLayout>
+
+</LinearLayout>

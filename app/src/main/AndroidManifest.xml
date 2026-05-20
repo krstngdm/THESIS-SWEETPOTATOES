@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Android 13+ -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <!-- For Android 12 and below -->
@@ -40,6 +44,9 @@
         tools:targetApi="33"
         tools:ignore="MissingClass">
 
+        <activity android:name=".CameraDetectionActivity"
+            android:screenOrientation="portrait" />
+
         <activity
             android:name=".FullscreenImageActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
@@ -55,6 +62,7 @@
 
         <activity
             android:name=".ConversationsActivity"
+            android:theme="@style/Theme.GrowSight"
             android:exported="false" />
 
         <provider
