@@ -47,13 +47,15 @@ object ModelManager {
         if (!mlDir.exists()) mlDir.mkdirs()
 
         val filesToCopy = listOf(
-            "yolov8.tflite",
-            "sweetpotato_final.tflite",
+            "yolov11_3_5.tflite",
+            "sweetpotato_v3_5.tflite",
             "labels.txt",
             "yolo_labels.json",
-            "scenario_classifier.tflite",  // ← ADD
-            "scenario_labels.json",         // ← ADD
-            "feature_scaler.json"           // ← ADD
+            "scenario_classifier.tflite",
+            "scenario_labels.json",
+            "feature_scaler.json",
+            "label_maps.json",
+            "numeric_cols.json"
         )
 
         filesToCopy.forEach { filename ->

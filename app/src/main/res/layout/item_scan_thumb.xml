@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    item_scan_thumb.xml
+    ─────────────────────────────────────────────────────────────────────────
+    Three visual states, all driven by the adapter (no style changes needed):
+
+    STATE A — FILLED  (slotType = FILLED)
+        • thumbShimmer / thumbImage visible as normal
+        • thumbStageBadge set by adapter
+        • thumbTimestamp shown
+        • missedOverlay          → GONE
+        • openWeekOverlay        → GONE
+        • missedExpandSection    → GONE
+        • pulseRing               → GONE
+
+    STATE B — MISSED  (slotType = MISSED)
+        • thumbImage             → INVISIBLE  (gray card bg shows)
+        • thumbShimmer           → GONE
+        • missedOverlay          → VISIBLE  (lock icon + "Week X" label)
+        • openWeekOverlay        → GONE
+        • missedExpandSection    → toggled by click (GONE / VISIBLE)
+        • pulseRing              → GONE
+        • thumbViewButton click  → expand/collapse missedExpandSection
+
+    STATE C — OPEN  (slotType = OPEN)
+        • thumbImage             → INVISIBLE
+        • thumbShimmer           → GONE
+        • openWeekOverlay        → VISIBLE  ("📷 Week X · Scan Now")
+        • missedOverlay          → GONE
+        • missedExpandSection    → GONE
+        • pulseRing              → VISIBLE  (animated in adapter)
+        • thumbViewButton click  → triggers camera/gallery chooser
+    ─────────────────────────────────────────────────────────────────────────
+-->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="140dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/white">
+
+    <!--
+        Pulse ring — drawn BEHIND the card content via negative margin trick.
+        Shown only for OPEN state; animated alpha 0.3 ↔ 1.0 in the adapter.
+        We use a separate View sized to match the CardView bounds so the ring
+        is always perfectly aligned.
+    -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.ai.growsight.BorderAnimView
+            android:id="@+id/pulseRing"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            app:cornerRadius="12dp" />
+
+        <!-- ── Main column ── -->
+        <LinearLayout
+            android:id="@+id/thumbViewButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="10dp"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <!-- ── Image / placeholder area ── -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_margin="8dp"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="10dp"
+                app:cardBackgroundColor="@color/DCDECA">
+
+                <!-- Shimmer (FILLED loading state) -->
+                <com.facebook.shimmer.ShimmerFrameLayout
+                    android:id="@+id/thumbShimmer"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="visible">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/shimmer_placeholder_rounded_8dp" />
+
+                </com.facebook.shimmer.ShimmerFrameLayout>
+
+                <!-- Actual image (FILLED state) -->
+                <ImageView
+                    android:id="@+id/thumbImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:visibility="invisible" />
+
+                <!-- Stage badge (FILLED state) -->
+                <TextView
+                    android:id="@+id/thumbStageBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="5dp"
+                    android:background="@drawable/rounded_corner_gray"
+                    android:fontFamily="@font/nunito_extrabold"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:textColor="@color/white"
+                    android:textSize="8sp"
+                    android:visibility="gone" />
+
+                <!-- ══════════════════════════════════════════════════════
+                     MISSED WEEK overlay  — lock icon + week label
+                     Centered over the gray placeholder area.
+                ══════════════════════════════════════════════════════ -->
+                <LinearLayout
+                    android:id="@+id/missedOverlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:src="@drawable/ic_lock_3"
+                        android:textSize="22sp" />
+
+                    <TextView
+                        android:id="@+id/missedWeekLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/nunito_bold"
+                        android:text="Week —"
+                        android:textColor="@color/green"
+                        android:textSize="10sp" />
+
+                </LinearLayout>
+
+                <!-- ══════════════════════════════════════════════════════
+                     OPEN WEEK overlay — camera icon + "Scan Now" prompt
+                     Centered over the placeholder area.
+                ══════════════════════════════════════════════════════ -->
+                <LinearLayout
+                    android:id="@+id/openWeekOverlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="3dp"
+                            android:src="@drawable/camera_5" />
+
+                        <ImageView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="3dp"
+                            android:src="@drawable/upload_3" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/openWeekLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/nunito_extrabold"
+                        android:text="Week —"
+                        android:textColor="@color/green"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/nunito_semibold"
+                        android:text="Tap to scan"
+                        android:textColor="@color/greenGray"
+                        android:textSize="10sp" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- ── Timestamp shimmer (FILLED loading) ── -->
+            <com.facebook.shimmer.ShimmerFrameLayout
+                android:id="@+id/thumbTimestampShimmer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="80dp"
+                    android:layout_height="9dp"
+                    android:background="@color/shimmer_placeholder" />
+
+            </com.facebook.shimmer.ShimmerFrameLayout>
+
+            <!-- ── Timestamp (FILLED state) ── -->
+            <LinearLayout
+                android:id="@+id/thumbTimestampRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="6dp"
+                android:paddingEnd="10dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/thumbWeekLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/nunito_extrabold"
+                    android:maxLines="1"
+                    android:textColor="@color/green"
+                    android:textSize="9sp" />
+
+                <TextView
+                    android:id="@+id/thumbTimestamp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/nunito_bold"
+                    android:gravity="end"
+                    android:maxLines="1"
+                    android:textColor="@color/greenGray"
+                    android:textSize="9sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <View
+            android:id="@+id/anomalyDot"
+            android:layout_width="13dp"
+            android:layout_height="13dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="5dp"
+            android:background="@drawable/circle_gray"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+</androidx.cardview.widget.CardView>

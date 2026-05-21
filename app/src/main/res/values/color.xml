@@ -5,7 +5,9 @@
     <color name="gray">#473C38</color>
     <color name="light_gray_bg">#f2f2f2</color>
     <color name="green">#315732</color>
+    <color name="translucent">#00315732</color>
     <color name="bg_green">#F4F6DD</color>
+    <color name="green_deep">#89A050</color>
     <color name="DCDECA">#DCDECA</color>
     <color name="gd_1">#315732</color>
     <color name="gd_2">#89A050</color>
@@ -14,20 +16,25 @@
     <color name="driedLeaf">#A48970</color>
 
     <color name="stage1">#E72E29</color>
-    <color name="stage2">#FF7701</color>
+    <color name="stage2">#FF6701</color>
     <color name="stage3">#FCBD5B</color>
-    <color name="stage4">#F5E627</color>
+    <color name="stage4">#D4AC0D</color>
     <color name="stage5">#B1DD56</color>
     <color name="stage6">#4ED938</color>
     <color name="divider_gray">#CCCCCC</color>
     <color name="bottom_devider">#92A687</color>
     <color name="gray_light">#E0E0E0</color>
     <color name="orange">#FFA071</color>
+    <color name="inconclusive">#FFDC9C</color>
     <color name="light_blue">#688FE5</color>
     <color name="red">#E72E29</color>
+    <color name="red_1">#A06350</color>
     <color name="blue">#305CDE</color>
     <color name="light_green">#B789A050</color>
 
+    <color name="not_ready">#B34208</color>
+    <color name="near_harvest">#D4AC0D</color>
+    <color name="harvest_ready">#1A7A40</color>
 
     <color name="shimmer_placeholder">#B789A050</color>
 

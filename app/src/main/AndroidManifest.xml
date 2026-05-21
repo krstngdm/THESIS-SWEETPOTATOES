@@ -34,25 +34,37 @@
         </intent>
     </queries>
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
+        android:theme="@style/Theme.GrowSight.Starting"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.GrowSight"
         tools:targetApi="33"
-        tools:ignore="MissingClass">
+        tools:ignore="MissingClass"
+        android:name=".GrowSightApp">
+
+
+        <activity
+            android:name=".PlantationProfileActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.GrowSight"
+            android:exported="false" />
 
         <activity android:name=".CameraDetectionActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.GrowSight" />
 
         <activity
             android:name=".FullscreenImageActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
         <activity
-            android:name=".UploadActivity"
+            android:name=".SplashActivity"
+            android:theme="@style/Theme.GrowSight.Starting"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -61,7 +73,22 @@
         </activity>
 
         <activity
+            android:name=".UploadActivity"
+            android:theme="@style/Theme.GrowSight"
+            android:exported="false" />
+
+        <activity
+            android:name=".MapPickerActivity"
+            android:theme="@style/Theme.GrowSight"
+            android:exported="false" />
+
+        <activity
             android:name=".ConversationsActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.GrowSight"
+            android:exported="false" />
+
+        <activity android:name=".PlantationListActivity"
             android:theme="@style/Theme.GrowSight"
             android:exported="false" />
 
@@ -73,6 +100,16 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
+        </provider>
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup" />
         </provider>
         <meta-data
             android:name="org.tensorflow.lite.SelectTfOps"

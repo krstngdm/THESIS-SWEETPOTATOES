@@ -3,22 +3,18 @@ package com.ai.growsight
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
-import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
-import androidx.drawerlayout.widget.DrawerLayout
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var uploadButton: Button
-    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var navCamera: LinearLayout
 
     private lateinit var galleryPickerLauncher: ActivityResultLauncher<PickVisualMediaRequest>
     private lateinit var cameraLauncher: ActivityResultLauncher<Uri>
@@ -28,68 +24,57 @@ class MainActivity : AppCompatActivity() {
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            openCamera()  // Permission granted → open camera
-        } else {
-            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show()
-        }
+        if (isGranted) openCamera()
+        else Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.main)
+        setContentView(R.layout.main)   // or R.layout.main — match your file name
 
-        uploadButton = findViewById(R.id.uploadButton)
-        drawerLayout = findViewById(R.id.drawerLayout)
+        navCamera = findViewById(R.id.navCamera)
 
-        // ---------- Register Camera Launcher ----------
+        // ── Camera launcher ──────────────────────────────────────────────────
         cameraLauncher = registerForActivityResult(
             ActivityResultContracts.TakePicture()
         ) { success ->
             if (success && cameraImageUri != null) {
-                sendImagesToConversation(arrayListOf(cameraImageUri!!))
+                launchQuickScan(arrayListOf(cameraImageUri!!))
             } else {
                 Toast.makeText(this, "Camera cancelled", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // ---------- Register Gallery Picker Launcher ----------
+        // ── Gallery launcher ─────────────────────────────────────────────────
         galleryPickerLauncher = registerForActivityResult(
-            ActivityResultContracts.PickMultipleVisualMedia(5) // up to 5 images
+            ActivityResultContracts.PickMultipleVisualMedia(5)
         ) { uris ->
-            if (uris.isNotEmpty()) {
-                sendImagesToConversation(ArrayList(uris))
-            } else {
-                Toast.makeText(this, "No images selected", Toast.LENGTH_SHORT).show()
+            if (uris.isNotEmpty()) launchQuickScan(ArrayList(uris))
+            else Toast.makeText(this, "No images selected", Toast.LENGTH_SHORT).show()
+        }
+
+        // ── Camera tab → quick scan chooser ─────────────────────────────────
+        navCamera.setOnClickListener {
+            showQuickScanChooser()
+        }
+    }
+
+    // ── Show camera / gallery picker dialog ──────────────────────────────────
+    private fun showQuickScanChooser() {
+        val options = arrayOf("📷  Take Photo", "🖼️  Choose from Gallery")
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Quick Scan")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> openCamera()
+                    1 -> pickFromGallery()
+                }
             }
-        }
-
-        // Upload button → show chooser
-        uploadButton.setOnClickListener {
-            pickFromSystemChooser()
-        }
+            .show()
     }
 
-
-    // ----------------------------------------------------------
-    //  SHOW CAMERA or GALLERY CHOOSER
-    // ----------------------------------------------------------
-    private fun pickFromSystemChooser() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "image/*"
-            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-        }
-
-        startActivityForResult(Intent.createChooser(intent, "Select Image"), 999)
-    }
-
-
-
-    // ----------------------------------------------------------
-    //  CAMERA FUNCTION
-    // ----------------------------------------------------------
+    // ── Camera ────────────────────────────────────────────────────────────────
     private fun openCamera() {
-        // Check permission
         if (checkSelfPermission(android.Manifest.permission.CAMERA)
             != android.content.pm.PackageManager.PERMISSION_GRANTED
         ) {
@@ -97,47 +82,29 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Permission already granted → proceed
         val imageFile = File(
             getExternalFilesDir(null),
-            "camera_image_${System.currentTimeMillis()}.jpg"
+            "quick_scan_${System.currentTimeMillis()}.jpg"
         )
-
-        cameraImageUri = FileProvider.getUriForFile(
-            this,
-            "${packageName}.provider",
-            imageFile
-        )
-
+        cameraImageUri = FileProvider.getUriForFile(this, "${packageName}.provider", imageFile)
         cameraLauncher.launch(cameraImageUri)
     }
 
-
-
-    // ----------------------------------------------------------
-    //  GALLERY FUNCTION
-    // ----------------------------------------------------------
+    // ── Gallery ───────────────────────────────────────────────────────────────
     private fun pickFromGallery() {
         galleryPickerLauncher.launch(
             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
         )
     }
 
-
-    // ----------------------------------------------------------
-    //  SEND IMAGES TO NEXT PAGE
-    // ----------------------------------------------------------
-    private fun sendImagesToConversation(imageUris: ArrayList<Uri>) {
+    // ── Launch ConversationsActivity with NO plantation (quick scan mode) ─────
+    private fun launchQuickScan(imageUris: ArrayList<Uri>) {
         val intent = Intent(this, ConversationsActivity::class.java).apply {
-            putParcelableArrayListExtra(
-                ConversationsActivity.EXTRA_IMAGE_URIS,
-                imageUris
-            )
+            putParcelableArrayListExtra(ConversationsActivity.EXTRA_IMAGE_URIS, imageUris)
+            putExtra(ConversationsActivity.EXTRA_IS_QUICK_SCAN, true)  // ← new flag
+            // No plantation ID passed → ConversationsActivity treats this as quick scan
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-
         startActivity(intent)
-
-        Toast.makeText(this, "Images sent to conversation", Toast.LENGTH_SHORT).show()
     }
 }

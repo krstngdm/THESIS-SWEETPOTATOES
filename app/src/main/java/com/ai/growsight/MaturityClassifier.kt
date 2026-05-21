@@ -29,13 +29,13 @@ class MaturityClassifier(private val context: Context) {
 
     private fun loadModelFile(): ByteBuffer {
         // Check local storage first (for model update support)
-        val localModel = File(context.filesDir, "ml/sweetpotato_final.tflite")
+        val localModel = File(context.filesDir, "ml/sweetpotato_v3_5.tflite")
         return if (localModel.exists()) {
             val fis = FileInputStream(localModel)
             fis.channel.map(FileChannel.MapMode.READ_ONLY, 0, localModel.length())
         } else {
             // Fall back to assets
-            val afd = context.assets.openFd("ml/sweetpotato_final.tflite")
+            val afd = context.assets.openFd("ml/sweetpotato_v3_5.tflite")
             FileInputStream(afd.fileDescriptor).channel.map(
                 FileChannel.MapMode.READ_ONLY,
                 afd.startOffset,

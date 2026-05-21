@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Represents paragraph / full text — used on "Full detail" tab -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="24"
+    android:viewportHeight="19">
+
+    <!-- Line 1 — full width -->
+    <path
+        android:fillColor="@color/green_deep"
+        android:pathData="M3,3 H21 V6 H3 Z" />
+    <!-- Line 2 — full width -->
+    <path
+        android:fillColor="@color/green_deep"
+        android:pathData="M3,8 H21 V11 H3 Z" />
+    <!-- Line 3 — full width -->
+    <path
+        android:fillColor="@color/green_deep"
+        android:pathData="M3,13 H21 V16 H3 Z" />
+    <!-- Line 4 — shorter (paragraph end) -->
+
+</vector>

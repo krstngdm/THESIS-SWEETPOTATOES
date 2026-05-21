@@ -10,8 +10,11 @@ data class PromptEntity(
     val conversationId: Long,
     val imageUris: List<String>,
     val diagnostic: String,
-    val timestamp: String,
+    val timestamp: String,           // display string "MM/dd/yyyy HH:mm"
+    val timestampMs: Long = 0L,      // unix epoch ms — used for calendar-week lock logic
     val weekNumber: Int? = null,
     val cropAgeWeeks: Int? = null,
-    val uriHash: String? = null
+    val uriHash: String? = null,
+    val isHiddenForRetake: Boolean = false,   // true = card hidden, retake in progress
+    val replacesPromptId: Long = -1L
 )

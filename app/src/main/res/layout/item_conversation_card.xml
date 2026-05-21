@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    item_conversation_card.xml
+-->
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_marginStart="10dp"
     android:layout_marginEnd="10dp"
     android:layout_marginTop="8dp"
@@ -28,7 +31,24 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal" />
+
         </HorizontalScrollView>
+
+        <!-- ── Conflict / outlier notice (shown below images when conflicts exist) ── -->
+        <TextView
+            android:id="@+id/conflictNoticeText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="2dp"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="7dp"
+            android:background="@drawable/rounded_corner_orange"
+            android:textSize="12sp"
+            android:textColor="#212121"
+            android:lineSpacingMultiplier="1.4"
+            android:visibility="gone"
+            tools:text="⚠️ 1 of 3 images were unclear or conflicting — shown in grayscale." />
 
         <!-- ── Scenario badge ── -->
         <TextView
@@ -45,6 +65,21 @@
             android:textColor="#473C38"
             android:textSize="11sp"
             android:textStyle="bold"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:tag="anomalyBanner"
+            android:elevation="5dp"
             android:visibility="gone" />
 
         <!-- ── Stage badge row ── -->
@@ -85,6 +120,7 @@
                 android:paddingStart="10dp"
                 android:paddingTop="4dp"
                 android:paddingEnd="10dp"
+                android:layout_marginEnd="5dp"
                 android:paddingBottom="4dp"
                 android:stateListAnimator="@null"
                 android:text="0%"
@@ -115,6 +151,7 @@
             android:background="@color/divider_gray" />
 
         <!-- ── Estimated harvest time ── -->
+
         <TextView
             android:id="@+id/harvestTimeTitle"
             android:layout_width="wrap_content"
@@ -134,10 +171,7 @@
             android:text="→ —"
             android:textSize="15sp" />
 
-        <!-- ── Toggle bar ──────────────────────────────────────────────────
-             Summary (LEFT, default) = narrative paragraph from ScenarioClassifier
-             Full detail (RIGHT)     = bullet recommendations + sections
-        ─────────────────────────────────────────────────────────────────── -->
+        <!-- ── Toggle bar ── -->
         <LinearLayout
             android:id="@+id/viewModeToggleBar"
             android:layout_width="match_parent"
@@ -211,7 +245,9 @@
 
         </LinearLayout>
 
-        <!-- ── Summary content: narrative paragraph (default VISIBLE) ── -->
+        <!-- ── Summary tab content ─────────────────────────────────────────── -->
+
+        <!-- Narrative paragraph from ScenarioClassifier (default VISIBLE) -->
         <TextView
             android:id="@+id/interpretationSummaryText"
             android:layout_width="match_parent"
@@ -222,13 +258,68 @@
             android:textSize="13sp"
             android:visibility="visible" />
 
-        <!-- ── Full detail content: bullet recommendations (default GONE) ── -->
+        <!-- Progress bullets: contextual quick hits (plantation only, GONE for quick scan) -->
+        <TextView
+            android:id="@+id/progressBulletsText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:paddingStart="4dp"
+            android:textSize="13sp"
+            android:textColor="#424242"
+            android:fontFamily="@font/nunito_regular"
+            android:lineSpacingMultiplier="1.6"
+            android:visibility="gone"
+            tools:text="✅ On track · 📅 Week 8 · 🗓️ ~6 weeks remaining" />
+
+        <!-- ── Full detail tab content ── -->
         <LinearLayout
             android:id="@+id/recommendationContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:visibility="gone" />
+
+        <!-- ── Retake + Re-analyze row ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/retakeButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:background="@drawable/rounded_lock_bg"
+                android:fontFamily="@font/nunito_extrabold"
+                android:text="🔄 Retake"
+                android:textAllCaps="false"
+                android:textColor="@color/greenGray"
+                android:textSize="12sp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:backgroundTint="@null"
+                app:cornerRadius="10dp" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reEvaluateButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Re-analyze"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:visibility="gone"
+                app:cornerRadius="8dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+        </LinearLayout>
 
         <!-- ── Footer divider ── -->
         <View
@@ -245,57 +336,69 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <LinearLayout
+            <HorizontalScrollView
                 android:id="@+id/weatherStrip"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
+                android:overScrollMode="never"
+                android:scrollbars="none"
                 android:visibility="gone">
 
-                <TextView
-                    android:id="@+id/weatherTemp"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:background="@drawable/rounded_corner_gray_light"
-                    android:paddingStart="8dp"
-                    android:paddingTop="3dp"
-                    android:paddingEnd="8dp"
-                    android:paddingBottom="3dp"
-                    android:text="🌡️ —"
-                    android:textColor="@color/gray"
-                    android:textSize="11sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/weatherHumidity"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:background="@drawable/rounded_corner_gray_light"
-                    android:paddingStart="8dp"
-                    android:paddingTop="3dp"
-                    android:paddingEnd="8dp"
-                    android:paddingBottom="3dp"
-                    android:text="💧 —"
-                    android:textColor="@color/gray"
-                    android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/weatherTemp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:background="@drawable/rounded_corner_gray_light"
+                        android:paddingStart="8dp"
+                        android:paddingTop="3dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="3dp"
+                        android:text="🌡️ —"
+                        android:textColor="@color/gray"
+                        android:textSize="11sp" />
 
-                <TextView
-                    android:id="@+id/weatherPrecip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/rounded_corner_gray_light"
-                    android:paddingStart="8dp"
-                    android:paddingTop="3dp"
-                    android:paddingEnd="8dp"
-                    android:paddingBottom="3dp"
-                    android:text="🌧️ —"
-                    android:textColor="@color/gray"
-                    android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/weatherHumidity"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:background="@drawable/rounded_corner_gray_light"
+                        android:paddingStart="8dp"
+                        android:paddingTop="3dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="3dp"
+                        android:text="💧 —"
+                        android:textColor="@color/gray"
+                        android:textSize="11sp" />
 
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/weatherPrecip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/rounded_corner_gray_light"
+                        android:paddingStart="8dp"
+                        android:paddingTop="3dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="3dp"
+                        android:text="🌧️ —"
+                        android:textColor="@color/gray"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
             <TextView
                 android:id="@+id/cardTimestamp"

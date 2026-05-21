@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="72dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- Thumbnail -->
+    <FrameLayout
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_marginEnd="12dp">
+
+        <!-- Shimmer placeholder shown while image loads -->
+        <com.facebook.shimmer.ShimmerFrameLayout
+            android:id="@+id/drawerThumbShimmer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/shimmer_placeholder_rounded_8dp" />
+        </com.facebook.shimmer.ShimmerFrameLayout>
+
+        <!-- Actual thumbnail image -->
+        <ImageView
+            android:id="@+id/drawerThumbImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:visibility="invisible"
+            android:contentDescription="Scan thumbnail" />
+
+        <!-- Stage dot — bottom-right corner -->
+        <View
+            android:id="@+id/drawerStageDot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="2dp"
+            android:background="@drawable/circle_gray" />
+
+    </FrameLayout>
+
+    <!-- Text column -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/drawerItemTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/nunito_bold"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="@color/gray"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/drawerItemTimestamp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/nunito_regular"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="@color/greenGray"
+            android:textSize="11sp"
+            android:layout_marginTop="2dp" />
+
+        <!-- Stage badge chip -->
+        <TextView
+            android:id="@+id/drawerStageBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:fontFamily="@font/nunito_semibold"
+            android:textSize="10sp"
+            android:textColor="@color/white"
+            android:background="@drawable/rounded_corner_gray"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Chevron -->
+    <ImageView
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="4dp"
+        android:src="@drawable/ic_edit_3"
+        android:alpha="0.3"
+        android:contentDescription="Open"
+        android:scaleType="fitCenter" />
+
+</LinearLayout>

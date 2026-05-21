@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_light_green">
+
+    <!-- Map fills the screen -->
+    <org.osmdroid.views.MapView
+        android:id="@+id/mapView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Center pin overlay (stays fixed in center while map pans) -->
+    <TextView
+        android:id="@+id/mapPin"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_centerInParent="true"
+        android:layout_marginBottom="40dp"
+        android:contentDescription="Map pin"
+        android:textAlignment="center"
+        android:textSize="20dp"
+        android:text="📍"
+        android:translationY="-25dp" />
+
+    <!-- Top bar -->
+    <RelativeLayout
+        android:id="@+id/mapTopBar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="28dp"
+        android:paddingStart="4dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/mapBackButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Back"
+            android:src="?attr/homeAsUpIndicator" />
+
+        <!--
+            Layer toggle chip — tapping switches between satellite and street map.
+            Label always shows what tapping will switch TO (not the current mode).
+        -->
+        <TextView
+            android:id="@+id/mapLayerToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/rounded_white_bg"
+            android:elevation="4dp"
+            android:fontFamily="@font/nunito_semibold"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:text="🗺 Map"
+            android:textColor="@color/black"
+            android:textSize="12sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:fontFamily="@font/nunito_extrabold"
+            android:text="Pin Your Plantation"
+            android:textColor="@color/white"
+            android:textSize="18sp" />
+
+    </RelativeLayout>
+
+    <!-- Instruction chip -->
+    <TextView
+        android:id="@+id/mapInstructionChip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/mapTopBar"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/rounded_corner_gray_light"
+        android:fontFamily="@font/nunito_semibold"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:text="Drag the map to move the pin"
+        android:textColor="@color/black"
+        android:textSize="13sp" />
+
+    <!-- Bottom confirm card -->
+    <LinearLayout
+        android:id="@+id/mapBottomCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="32dp"
+        android:background="@drawable/rounded_white_bg"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Row: "Location name" label + "✏ editable" hint -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/nunito_bold"
+                android:text="Location name"
+                android:textColor="@color/green"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/nunito_semibold"
+                android:text="✏ editable"
+                android:textColor="@color/gray"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <!--
+            Editable location name.
+            Pre-filled from reverse geocoding as the user moves the pin.
+            Once the user taps and types, geocoding stops overwriting their input.
+        -->
+        <EditText
+            android:id="@+id/mapLocationLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/rounded_corner_gray_light"
+            android:fontFamily="@font/nunito_semibold"
+            android:hint="Tap to edit location name"
+            android:imeOptions="actionDone"
+            android:inputType="textCapSentences"
+            android:maxLines="2"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:textColor="@color/black"
+            android:textColorHint="@color/gray"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/mapLatLonLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:fontFamily="@font/nunito_regular"
+            android:textColor="@color/gray"
+            android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/mapConfirmButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/gradient_background"
+            android:fontFamily="@font/nunito_extrabold"
+            android:text="Confirm this location"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            app:backgroundTint="@null"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+        <Button
+            android:id="@+id/mapCancelButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="4dp"
+            android:background="@android:color/transparent"
+            android:fontFamily="@font/nunito_semibold"
+            android:text="Go back and change"
+            android:textAllCaps="false"
+            android:textColor="@color/gray"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+</RelativeLayout>

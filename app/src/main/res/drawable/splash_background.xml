@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Background color -->
+    <item>
+        <color android:color="#333333"/>
+    </item>
+
+    <!-- Center leaf icon -->
+    <item
+        android:gravity="center"
+        android:width="40dp"
+        android:height="40dp">
+        <bitmap
+            android:src="@drawable/ic_growsight_leaf"
+            android:gravity="center"
+            android:scaleType="fitCenter"/>
+    </item>
+
+    <!-- Bottom wordmark -->
+    <item
+        android:gravity="bottom|center_horizontal"
+        android:bottom="10dp"
+        android:width="180dp"
+        android:height="55dp">
+        <bitmap
+            android:src="@drawable/ic_growsight_text"
+            android:gravity="center"
+            android:scaleType="fitCenter"/>
+    </item>
+
+</layer-list>

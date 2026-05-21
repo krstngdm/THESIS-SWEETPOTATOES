@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp">
+
+        <!-- Avatar — gradient background from brand colors -->
+        <FrameLayout
+            android:id="@+id/rowAvatarFrame"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginEnd="14dp">
+
+            <View
+                android:id="@+id/rowAvatarBg"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/rounded_corner_gray_light" />
+
+            <ImageView
+                android:id="@+id/rowAvatarImage"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_gravity="center"
+                android:scaleType="centerCrop"
+                android:contentDescription="Plantation thumbnail"
+                android:src="@drawable/ic_growsight_leaf_2" />
+
+        </FrameLayout>
+
+        <!-- Middle: name + meta + chips + progress -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Plantation name — dark warm gray -->
+            <TextView
+                android:id="@+id/rowPlantationName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_extrabold"
+                android:maxLines="1"
+                android:text="Plantation Name"
+                android:textColor="@color/gray"
+                android:textSize="15sp" />
+
+            <!-- Week · Location — muted greenGray -->
+            <TextView
+                android:id="@+id/rowMeta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/nunito_semibold"
+                android:text="Week 1 · Zamboanga City · Not Ready"
+                android:textColor="@color/greenGray"
+                android:textSize="11sp" />
+
+            <!-- Week number chips — colored programmatically -->
+            <LinearLayout
+                android:id="@+id/rowWeekChips"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" />
+
+            <!-- Progress bar — DCDECA track, stage color fill -->
+            <ProgressBar
+                android:id="@+id/rowProgressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="6dp"
+                android:max="22"
+                android:progress="1"
+                android:progressBackgroundTint="@color/DCDECA"
+                android:progressTint="@color/green"
+                android:minHeight="4dp"
+                android:maxHeight="4dp" />
+
+        </LinearLayout>
+
+        <!-- Stage badge — color set programmatically -->
+        <TextView
+            android:id="@+id/rowStageBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:fontFamily="@font/nunito_extrabold"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="Not Ready"
+            android:textColor="@color/white"
+            android:textSize="11sp"
+            android:background="@drawable/rounded_corner_gray" />
+
+        <!-- Chevron — greenGray muted -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:fontFamily="@font/nunito_bold"
+            android:text="›"
+            android:textColor="@color/greenGray"
+            android:textSize="22sp" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

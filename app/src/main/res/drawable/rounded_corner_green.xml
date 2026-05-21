@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Solid background color -->
-    <solid android:color="#4CAF50" /> <!-- Light gray color -->
+    <solid android:color="@color/harvest_ready" /> <!-- Light gray color -->
 
     <!-- Rounded corners -->
     <corners android:radius="5dp" /> <!-- Adjust radius as needed -->

@@ -1,23 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Base application theme -->
-    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Customize your theme here -->
-        <item name="colorPrimary">@drawable/gradient_background</item>
-        <item name="buttonStyle">@style/CustomButton</item>
-        <item name="backgroundTint">@color/white</item>
-    </style>
-    <style name="CustomButton" parent="Widget.AppCompat.Button">
-        <item name="backgroundTint">?attr/colorPrimary</item>
-    </style>
-    <style name="StageBadge">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:padding">6dp</item>
-        <item name="android:textColor">@android:color/white</item>
-        <item name="android:textSize">12sp</item>
-        <item name="android:layout_marginEnd">6dp</item>
-        <item name="android:layout_marginStart">6dp</item>
-        <item name="android:gravity">center</item>
-    </style>
-</resources>
+    <resources>
+        <style name="StageBadge">
+            <item name="android:layout_width">wrap_content</item>
+            <item name="android:layout_height">wrap_content</item>
+            <item name="android:padding">6dp</item>
+            <item name="android:textColor">@android:color/white</item>
+            <item name="android:textSize">12sp</item>
+            <item name="android:layout_marginEnd">6dp</item>
+            <item name="android:layout_marginStart">6dp</item>
+            <item name="android:gravity">center</item>
+        </style>
+        <style name="TabTextAppearance" parent="TextAppearance.Design.Tab">
+            <item name="fontFamily">@font/nunito_bold</item>
+            <item name="android:textSize">13sp</item>
+        </style>
+        <style name="BottomRoundedCardShape" parent="">
+            <item name="backgroundColor">@android:color/white</item>
+            <item name="cornerFamily">rounded</item>
+            <item name="cornerSizeTopLeft">0dp</item>
+            <item name="cornerSizeTopRight">0dp</item>
+            <item name="cornerSizeBottomLeft">16dp</item>
+            <item name="cornerSizeBottomRight">16dp</item>
+        </style>
+        <style name="CustomBottomSheetDialog" parent="Theme.Material3.Light.BottomSheetDialog">
+            <item name="bottomSheetStyle">@style/CustomBottomSheet</item>
+        </style>
+
+        <style name="CustomBottomSheet" parent="Widget.Material3.BottomSheet.Modal">
+            <item name="backgroundTint">@color/bg_light_green</item>  <!-- your bg color -->
+            <item name="shapeAppearanceOverlay">@style/CustomBottomSheetShape</item>
+        </style>
+
+        <style name="CustomBottomSheetShape" parent="">
+            <item name="cornerFamily">rounded</item>
+            <item name="cornerSizeTopLeft">20dp</item>
+            <item name="cornerSizeTopRight">20dp</item>
+            <item name="cornerSizeBottomLeft">0dp</item>
+            <item name="cornerSizeBottomRight">0dp</item>
+        </style>
+    </resources>

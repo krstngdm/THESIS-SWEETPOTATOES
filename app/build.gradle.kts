@@ -45,6 +45,13 @@ android {
 }
 
 dependencies {
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     implementation (libs.android.spinkit)
     implementation ("com.facebook.shimmer:shimmer:0.5.0")

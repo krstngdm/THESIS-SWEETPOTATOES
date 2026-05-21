@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_light_green"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <!-- ── Top bar — green_deep ──────────────────────────────────────────── -->
+    <LinearLayout
+        android:id="@+id/listTopBar"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:background="@color/green_deep"
+        android:elevation="4dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp">
+
+        <ImageButton
+            android:id="@+id/logoButton"
+            android:layout_width="140dp"
+            android:layout_height="40dp"
+            android:adjustViewBounds="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="GrowSight"
+            android:scaleType="fitStart"
+            android:src="@drawable/grow_white" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="end">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/nunito_extrabold"
+                android:text="My Plantations"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/listSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/nunito_semibold"
+                android:text="0 active"
+                android:textColor="@color/DCDECA"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ── Tab strip — green_deep bg, white active indicator ─────────────── -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/plantationTabs"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_below="@id/listTopBar"
+        android:background="@color/green_deep"
+        app:tabTextColor="@color/DCDECA"
+        app:tabSelectedTextColor="@color/white"
+        app:tabIndicatorColor="@color/white"
+        app:tabIndicatorHeight="3dp"
+        app:tabRippleColor="@null"
+        app:tabTextAppearance="@style/TabTextAppearance" />
+
+    <!-- ── Content container ─────────────────────────────────────────────── -->
+    <FrameLayout
+        android:id="@+id/plantationTabContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/plantationTabs"
+        android:layout_above="@id/listBottomNav">
+
+        <!-- Plantation list — bg_light_green page bg -->
+        <ListView
+            android:id="@+id/plantationListView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="12dp"
+            android:padding="12dp"
+            android:clipToPadding="false"
+            android:scrollbars="none" />
+
+        <!-- Empty state — greenGray text on bg_light_green -->
+        <LinearLayout
+            android:id="@+id/listEmptyState"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="🌱"
+                android:textSize="48sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:fontFamily="@font/nunito_extrabold"
+                android:gravity="center"
+                android:text="No plantations yet"
+                android:textColor="@color/gray"
+                android:textSize="18sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:fontFamily="@font/nunito_regular"
+                android:gravity="center"
+                android:text="Create your first plantation to start monitoring your sweet potato crop."
+                android:textColor="@color/greenGray"
+                android:textSize="13sp" />
+
+            <!-- Primary action button — green gradient -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/emptyCreateButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/gradient_background"
+                android:fontFamily="@font/nunito_extrabold"
+                android:paddingHorizontal="32dp"
+                android:paddingVertical="10dp"
+                android:text="+ New Plantation"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                app:backgroundTint="@null" />
+        </LinearLayout>
+
+        <!-- Quick Scans list -->
+        <ListView
+            android:id="@+id/quickScanListView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="12dp"
+            android:padding="12dp"
+            android:clipToPadding="false"
+            android:scrollbars="none"
+            android:visibility="gone" />
+
+        <!-- Quick Scans empty state -->
+        <LinearLayout
+            android:id="@+id/quickScanEmptyState"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="📷"
+                android:textSize="48sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:fontFamily="@font/nunito_extrabold"
+                android:gravity="center"
+                android:text="No quick scans yet"
+                android:textColor="@color/gray"
+                android:textSize="18sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/nunito_regular"
+                android:gravity="center"
+                android:text="Use the Camera tab to scan a crop without linking it to a plantation."
+                android:textColor="@color/greenGray"
+                android:textSize="13sp" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- ── Bottom nav — white bg, green active ───────────────────────────── -->
+    <LinearLayout
+        android:id="@+id/listBottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_alignParentBottom="true"
+        android:background="@color/white"
+        android:elevation="8dp"
+        android:orientation="horizontal"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <LinearLayout
+            android:id="@+id/listNavHome"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingBottom="6dp">
+
+            <ImageView
+                android:id="@+id/navHomeIcon"
+                android:layout_width="40dp"
+                android:layout_height="24dp"
+                android:contentDescription="Home"
+                android:padding="3dp"
+                android:paddingHorizontal="2dp"
+                android:elevation="1dp"
+                android:src="@drawable/ic_home_3" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/nunito_semibold"
+                android:text="Home"
+                android:textColor="@color/greenGray"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/listNavPlantations"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingBottom="6dp">
+
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="24dp"
+                android:background="@drawable/nav_active_bg"
+                android:elevation="1dp">
+
+                <ImageView
+                    android:layout_width="33dp"
+                    android:layout_height="match_parent"
+                    android:contentDescription="Plantations"
+                    android:padding="4dp"
+                    android:scaleType="fitCenter"
+                    android:layout_gravity="center"
+                    android:src="@drawable/plantation_4" />
+
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/nunito_bold"
+                android:text="Plantations"
+                android:textColor="@color/green"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/listNavCamera"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingBottom="6dp">
+
+            <ImageView
+                android:layout_width="27dp"
+                android:layout_height="27dp"
+                android:contentDescription="Camera"
+                android:elevation="3dp"
+                android:padding="5dp"
+                android:src="@drawable/ic_quick_scan" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/nunito_semibold"
+                android:text="Quick Scan"
+                android:textColor="@color/greenGray"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+</RelativeLayout>

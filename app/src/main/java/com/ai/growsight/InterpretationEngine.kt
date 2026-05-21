@@ -1,5 +1,12 @@
     package com.ai.growsight.ai
 
+    data class AnomalyFlag(
+        val badgeLabel: String,
+        val severity: String,       // "critical" | "high" | "medium" | "low"
+        val detail: String,
+        val suggestion: String
+    )
+
     data class CropInterpretation(
         val stage: String,
         val stageEmoji: String,
@@ -10,7 +17,9 @@
         val lowConfidenceWarning: Boolean,
         val weatherSummary: String? = null,
         val scenarioLabel: String? = null,
-        val interpretationSummary: String? = null
+        val interpretationSummary: String? = null,
+        val scenarioId: Int = -1,
+        val anomalyFlags: List<AnomalyFlag> = emptyList()
     )
 
     object InterpretationEngine {
@@ -45,7 +54,9 @@
                 lowConfidenceWarning  = lowConfidence,
                 weatherSummary        = weatherSummary,
                 scenarioLabel         = scenarioResult.scenarioLabel,
-                interpretationSummary = scenarioResult.summary
+                interpretationSummary = scenarioResult.summary,
+                scenarioId            = scenarioResult.scenarioId,
+                anomalyFlags          = scenarioResult.anomalyFlags
             )
         }
 
@@ -82,20 +93,32 @@
          * This is the ONLY source of harvestTime — no hardcoded stage-level strings.
          */
         fun scenarioHarvestTime(scenarioId: Int): String = when (scenarioId) {
-            0  -> "~8–10 weeks remaining"
-            1  -> "~6–8 weeks remaining"
-            2  -> "~4–6 weeks remaining"
+            0  -> "~8–15 weeks remaining"
+            1  -> "~6–7 weeks remaining"
+            2  -> "~3–5 weeks remaining"
             3  -> "Significantly delayed — assess urgently"
-            4  -> "~1–2 weeks to harvest"
-            5  -> "Harvest within 1 week — heat risk"
+            4  -> "~7–14 days to harvest"
+            5  -> "Harvest within 7 days — heat risk"
             6  -> "Harvest when dry — rain risk"
-            7  -> "Overdue — harvest as soon as possible"
+            7  -> "~1–2 weeks remaining — watch for vine slowdown and soil mounding near plant bases"
             8  -> "Harvest within 3–5 days"
             9  -> "Verify readiness before harvesting"
             10 -> "Harvest immediately — overdue"
             11 -> "Unable to determine — no plant detected"
             else -> "Unknown"
         }
+
+        /**
+         * Returns true when the harvest-time row is worth showing.
+         * Hides for "Cannot estimate / Cannot determine / Unable / Unknown" values —
+         * those situations are already communicated through interpretationText.
+         */
+        fun isHarvestTimeDisplayable(harvestTime: String): Boolean =
+            harvestTime.isNotBlank() &&
+                    !harvestTime.startsWith("Cannot estimate",      ignoreCase = true) &&
+                    !harvestTime.startsWith("Cannot determine",     ignoreCase = true) &&
+                    !harvestTime.startsWith("Unable to determine",  ignoreCase = true) &&
+                    !harvestTime.equals("Unknown",                  ignoreCase = true)
 
         // Fallback only used when ScenarioClassifier is unavailable
         private fun fallbackHarvestTime(label: String): String = when (label) {
@@ -168,6 +191,7 @@
                 weather.precipitationMm >= 20             -> parts.add("heavy rain ${weather.precipitationMm}mm")
                 weather.precipitationMm in 5f..19f        -> parts.add("moderate rain ${weather.precipitationMm}mm")
                 weather.precipitationMm in 1f..4f         -> parts.add("light rain ${weather.precipitationMm}mm")
+                weather.precipitationMm < 1f && weather.temperatureCelsius > 28f -> parts.add("dry conditions")
             }
             return if (parts.isEmpty()) "Normal conditions" else parts.joinToString(", ").replaceFirstChar { it.uppercase() }
         }

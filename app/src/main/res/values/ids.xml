@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="modalImageView" type="id" />
+    <item name="activityShowMoreBtn" type="id" />
+    <item name="quickScansShowMoreBtn" type="id" />
 </resources>

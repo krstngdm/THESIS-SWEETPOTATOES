@@ -22,7 +22,12 @@ import android.util.Log
 
 object LocationWeatherManager {
 
-    // Callback when flow completes
+    // ── Time budget ───────────────────────────────────────────────────────────
+    // LocationHelper can take up to 15 s for a fresh GPS fix.
+    // Add ~5 s for the weather API call.  Total budget: 20 s.
+    private const val WEATHER_FETCH_TIMEOUT_MS = 20_000L
+    private const val WEATHER_FETCH_TIMEOUT_SEC = (WEATHER_FETCH_TIMEOUT_MS / 1000).toInt()
+
     interface WeatherFlowCallback {
         fun onWeatherReady(weather: WeatherData?)
         fun onSkipped()
@@ -32,23 +37,35 @@ object LocationWeatherManager {
         activity: AppCompatActivity,
         callback: WeatherFlowCallback
     ) {
-        val hasPermission = ContextCompat.checkSelfPermission(
+        // Accept either FINE or COARSE permission.
+        // Without FINE, Android caps GPS accuracy to ~500 m — see manifest note below.
+        val hasFinePermission = ContextCompat.checkSelfPermission(
+            activity, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val hasCoarsePermission = ContextCompat.checkSelfPermission(
             activity, Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
+
+        val hasAnyPermission = hasFinePermission || hasCoarsePermission
+
+        if (!hasFinePermission) {
+            // Log a warning so it's visible in dev builds — app still works with coarse,
+            // but accuracy will be limited.  Add ACCESS_FINE_LOCATION to AndroidManifest.xml
+            // and request it at runtime alongside COARSE to get full GPS accuracy.
+            Log.w("LocationWeatherManager",
+                "ACCESS_FINE_LOCATION not granted — location accuracy limited to coarse (~500 m). " +
+                        "Add ACCESS_FINE_LOCATION to manifest and request it at runtime for best results.")
+        }
 
         val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val isLocationOn = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 
         when {
-            // Location permission not granted — skip silently
-            !hasPermission -> callback.onWeatherReady(null)
-
-            // Location service is OFF — show modal
-            !isLocationOn -> showLocationOffModal(activity, callback)
-
-            // Location is on — check internet and fetch
-            else -> checkInternetAndFetch(activity, callback)
+            !hasAnyPermission -> callback.onWeatherReady(null)
+            !isLocationOn     -> showLocationOffModal(activity, callback)
+            else              -> checkInternetAndFetch(activity, callback)
         }
     }
 
@@ -67,21 +84,18 @@ object LocationWeatherManager {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         val locationOffSection = dialogView.findViewById<View>(R.id.locationOffSection)
-        val findingSection = dialogView.findViewById<View>(R.id.findingLocationSection)
-        val noInternetSection = dialogView.findViewById<View>(R.id.noInternetSection)
-        val btnOpenSettings = dialogView.findViewById<Button>(R.id.btnOpenSettings)
-        val btnSkip = dialogView.findViewById<Button>(R.id.btnSkipLocation)
-        val btnCancelLocation = dialogView.findViewById<Button>(R.id.btnCancelLocation)
+        val findingSection     = dialogView.findViewById<View>(R.id.findingLocationSection)
+        val btnOpenSettings    = dialogView.findViewById<Button>(R.id.btnOpenSettings)
+        val btnSkip            = dialogView.findViewById<Button>(R.id.btnSkipLocation)
+        val btnCancelLocation  = dialogView.findViewById<Button>(R.id.btnCancelLocation)
         val locationStatusText = dialogView.findViewById<TextView>(R.id.locationStatusText)
 
         btnOpenSettings.setOnClickListener {
-            // Open location settings
             activity.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
 
-            // Poll for location being turned on
             activity.lifecycleScope.launch {
                 var waited = 0
-                while (waited < 30000) { // wait up to 30 seconds for user to turn on
+                while (waited < 30_000) {
                     delay(1000)
                     waited += 1000
 
@@ -90,14 +104,15 @@ object LocationWeatherManager {
                             lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 
                     if (nowOn) {
-                        // Location turned on — switch to finding state
                         locationOffSection.visibility = View.GONE
-                        findingSection.visibility = View.VISIBLE
-                        checkInternetAndFetch(activity, callback, dialog, locationStatusText, btnCancelLocation)
+                        findingSection.visibility     = View.VISIBLE
+                        checkInternetAndFetch(
+                            activity, callback, dialog, locationStatusText, btnCancelLocation
+                        )
                         return@launch
                     }
                 }
-                // User didn't turn on location in time
+                // User didn't turn on location within 30 s
                 dialog.dismiss()
                 callback.onWeatherReady(null)
             }
@@ -118,26 +133,23 @@ object LocationWeatherManager {
         statusText: TextView? = null,
         cancelButton: Button? = null
     ) {
-        val hasInternet = isInternetAvailable(activity)
-
-        if (!hasInternet) {
+        if (!isInternetAvailable(activity)) {
             if (existingDialog != null) {
-                // Update existing dialog to show no internet state
-                existingDialog.findViewById<View>(R.id.locationOffSection)?.visibility = View.GONE
+                existingDialog.findViewById<View>(R.id.locationOffSection)?.visibility   = View.GONE
                 existingDialog.findViewById<View>(R.id.findingLocationSection)?.visibility = View.GONE
-                existingDialog.findViewById<View>(R.id.noInternetSection)?.visibility = View.VISIBLE
-                existingDialog.findViewById<Button>(R.id.btnContinueNoInternet)?.setOnClickListener {
-                    existingDialog.dismiss()
-                    callback.onWeatherReady(null)
-                }
+                existingDialog.findViewById<View>(R.id.noInternetSection)?.visibility    = View.VISIBLE
+                existingDialog.findViewById<Button>(R.id.btnContinueNoInternet)
+                    ?.setOnClickListener {
+                        existingDialog.dismiss()
+                        callback.onWeatherReady(null)
+                    }
             } else {
-                // Show fresh dialog with no internet state
                 showNoInternetModal(activity, callback)
             }
             return
         }
 
-        // Has internet — show finding location modal if no existing dialog
+        // Show the "finding location" dialog if we don't already have one
         val dialog = existingDialog ?: run {
             val dialogView = LayoutInflater.from(activity)
                 .inflate(R.layout.dialog_location_weather, null)
@@ -148,14 +160,14 @@ object LocationWeatherManager {
                 .create()
 
             d.window?.setBackgroundDrawableResource(android.R.color.transparent)
-            dialogView.findViewById<View>(R.id.locationOffSection).visibility = View.GONE
+            dialogView.findViewById<View>(R.id.locationOffSection).visibility    = View.GONE
             dialogView.findViewById<View>(R.id.findingLocationSection).visibility = View.VISIBLE
             d.show()
             d
         }
 
         val finalStatusText = statusText ?: dialog.findViewById(R.id.locationStatusText)
-        val finalCancelBtn = cancelButton ?: dialog.findViewById(R.id.btnCancelLocation)
+        val finalCancelBtn  = cancelButton ?: dialog.findViewById(R.id.btnCancelLocation)
 
         var cancelled = false
 
@@ -165,46 +177,55 @@ object LocationWeatherManager {
             callback.onWeatherReady(null)
         }
 
-        // Fetch location + weather with 10 second timeout
         activity.lifecycleScope.launch {
             var secondsWaited = 0
-            val updateJob = launch {
+
+            // Countdown ticker — updates every second
+            val tickerJob = launch {
                 while (true) {
                     delay(1000)
                     secondsWaited++
-                    val remaining = 10 - secondsWaited
+                    val remaining = WEATHER_FETCH_TIMEOUT_SEC - secondsWaited
                     activity.runOnUiThread {
-                        finalStatusText?.text = if (remaining > 0)
-                            "Searching... ($remaining seconds remaining)"
-                        else
-                            "Almost there..."
+                        finalStatusText?.text = when {
+                            remaining > 10 -> "Finding your location... ($remaining seconds remaining)"
+                            remaining > 0  -> "Almost there... ($remaining seconds remaining)"
+                            else           -> "Finishing up..."
+                        }
                     }
                 }
             }
 
-            val weather = withTimeoutOrNull(10000L) {
+            // ── Main fetch: location + weather, 20-second budget ─────────────
+            // LocationHelper will use GPS (up to 15 s), then WeatherService (~1–2 s).
+            val weather = withTimeoutOrNull(WEATHER_FETCH_TIMEOUT_MS) {
                 try {
-                    val location = LocationHelper.getLastLocation(activity)
+                    val location = LocationHelper.getLocation(activity)
                     if (location != null) {
+                        Log.d("LocationWeatherManager",
+                            "Location acquired: ${location.latitude}, ${location.longitude} " +
+                                    "(acc ${location.accuracy}m)")
                         activity.runOnUiThread {
-                            finalStatusText?.text = "Location found! Fetching weather..."
+                            finalStatusText?.text = "Location found! Fetching weather data..."
                         }
                         WeatherService.fetchWeather(location.latitude, location.longitude)
-                    } else null
+                    } else {
+                        Log.w("LocationWeatherManager", "Location returned null — skipping weather fetch")
+                        null
+                    }
                 } catch (e: Exception) {
-                    Log.e("LocationWeatherManager", "Failed: ${e.message}")
+                    Log.e("LocationWeatherManager", "Fetch failed: ${e.message}", e)
                     null
                 }
             }
 
-            updateJob.cancel()
+            tickerJob.cancel()
 
             if (!cancelled) {
                 dialog.dismiss()
                 if (weather != null) {
                     callback.onWeatherReady(weather)
                 } else {
-                    // Timed out or failed
                     showWeatherFailedToast(activity)
                     callback.onWeatherReady(null)
                 }
@@ -226,9 +247,9 @@ object LocationWeatherManager {
 
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        dialogView.findViewById<View>(R.id.locationOffSection).visibility = View.GONE
+        dialogView.findViewById<View>(R.id.locationOffSection).visibility    = View.GONE
         dialogView.findViewById<View>(R.id.findingLocationSection).visibility = View.GONE
-        dialogView.findViewById<View>(R.id.noInternetSection).visibility = View.VISIBLE
+        dialogView.findViewById<View>(R.id.noInternetSection).visibility     = View.VISIBLE
 
         dialogView.findViewById<Button>(R.id.btnContinueNoInternet).setOnClickListener {
             dialog.dismiss()
@@ -251,7 +272,7 @@ object LocationWeatherManager {
     private fun isInternetAvailable(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(network) ?: return false
+        val caps    = cm.getNetworkCapabilities(network) ?: return false
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
                 caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
